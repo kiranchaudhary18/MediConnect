@@ -18,18 +18,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 const StudentLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Initialize dark mode from localStorage or system preference
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('darkMode');
-      if (savedTheme !== null) {
-        return savedTheme === 'true';
-      }
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { darkMode, toggleDarkMode } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const profileRef = useRef(null);
@@ -59,17 +49,7 @@ const StudentLayout = () => {
     navigate('/login');
   };
 
-  // Toggle dark mode and save preference to localStorage
-  const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
+  // Dark mode is handled by ThemeContext
 
   // Apply dark mode class on initial load
   useEffect(() => {
