@@ -47,6 +47,22 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                className: 'dark:bg-gray-800 dark:text-white',
+                success: {
+                  className: '!bg-green-100 dark:!bg-green-900 !text-green-700 dark:!text-green-100',
+                  iconTheme: {
+                    primary: '#10B981',
+                    secondary: 'white',
+                  },
+                },
+                error: {
+                  className: '!bg-red-100 dark:!bg-red-900 !text-red-700 dark:!text-red-100',
+                },
+              }}
+            />
             <SocketProvider>
               <Routes>
                 <Route element={<PublicRoute />}>

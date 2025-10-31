@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import AISymptomChecker from '../components/AISymptomChecker'
 import { Heart, Users, GraduationCap, Shield, Stethoscope, Calendar, MessageSquare, Clock, CheckCircle, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -54,6 +55,9 @@ const Home = () => {
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-50 dark:from-gray-900 to-transparent"></div>
       </section>
+
+      {/* AI Symptom Checker */}
+      <AISymptomChecker />
 
       {/* Features Section */}
       <section className="py-16 md:py-24 bg-white dark:bg-gray-900">

@@ -12,6 +12,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const { login, user } = useAuth()
   const navigate = useNavigate()
 
@@ -26,7 +27,7 @@ const Login = () => {
     setError('')
 
     try {
-      const result = await login(formData.email, formData.password)
+      const result = await login(formData.email, formData.password, rememberMe)
       if (result.success) {
         // Redirect to respective dashboard based on role
         const dashboardPath = `/${result.user.role}/dashboard`
@@ -136,11 +137,13 @@ const Login = () => {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
                     disabled={loading}
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                    Remember me
+                    Remember me (stay logged in)
                   </label>
                 </div>
                 <div className="text-sm">

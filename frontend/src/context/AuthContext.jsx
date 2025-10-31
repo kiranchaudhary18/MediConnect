@@ -15,7 +15,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [token, setToken] = useState(localStorage.getItem('token'))
+  const [token, setToken] = useState(localStorage.getItem('token') || sessionStorage.getItem('token'))
 
   // Set up axios interceptor for token
   useEffect(() => {
@@ -86,13 +86,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
       const response = await axios.post('/api/auth/login', { email, password })
       
       if (response.data.success) {
         const { token: newToken, user: userData } = response.data
-        localStorage.setItem('token', newToken)
+        
+        if (rememberMe) {
+          localStorage.setItem('token', newToken)
+        } else {
+          sessionStorage.setItem('token', newToken)
+        }
+        
         setToken(newToken)
         setUser(userData)
         toast.success('Logged in successfully!')
@@ -138,6 +144,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error)
     } finally {
       localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
       setToken(null)
       setUser(null)
       delete axios.defaults.headers.common['Authorization']

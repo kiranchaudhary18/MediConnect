@@ -16,21 +16,33 @@ import {
   Activity
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { toast } from 'react-hot-toast';
 
 export default function PatientLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'Appointment Confirmed', message: 'Your appointment with Dr. Smith is confirmed for tomorrow at 10:00 AM', time: '10 minutes ago', read: false },
+    { id: 2, title: 'New Prescription', message: 'Dr. Johnson has prescribed new medication', time: '2 hours ago', read: true },
+    { id: 3, title: 'Test Results', message: 'Your recent lab test results are now available', time: '1 day ago', read: false },
+  ]);
   const profileRef = useRef(null);
+  const notificationRef = useRef(null);
   const { user, logout } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setNotificationOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -44,10 +56,21 @@ export default function PatientLayout() {
     navigate('/login');
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+  const markAsRead = (id) => {
+    setNotifications(notifications.map(notif => 
+      notif.id === id ? { ...notif, read: true } : notif
+    ));
   };
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(notif => ({
+      ...notif,
+      read: true
+    })));
+    toast.success('All notifications marked as read');
+  };
+
+  // Dark mode is now handled by ThemeContext
 
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/patient/dashboard' },
@@ -60,7 +83,7 @@ export default function PatientLayout() {
   ];
 
   return (
-    <div className={`flex h-screen bg-gray-50 dark:bg-gray-900 ${darkMode ? 'dark' : ''}`}>
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile sidebar */}
       <div className={`lg:hidden fixed inset-0 z-20 flex flex-col h-full bg-white dark:bg-gray-800 w-64 transform ${isCollapsed ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out`}>
         {/* Logo */}
@@ -192,26 +215,88 @@ export default function PatientLayout() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleDarkMode}
-                className="p-2 text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-label="Toggle dark mode"
               >
-                {darkMode ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               
-              <button className="p-2 text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
-              </button>
-
-              {/* Profile dropdown */}
+              {/* Notifications */}
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setNotificationOpen(!notificationOpen)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.some(n => !n.read) && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </button>
+                
+                {/* Notification Dropdown */}
+                {notificationOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="font-medium text-gray-900 dark:text-white">Notifications</h3>
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
+                      >
+                        Mark all as read
+                      </button>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                          No new notifications
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                              !notification.read ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                            }`}
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0 pt-0.5">
+                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                              </div>
+                              <div className="ml-3">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {notification.title}
+                                </p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {notification.message}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                  {notification.time}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
+                      <Link
+                        to="/notifications"
+                        className="text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
+                        onClick={() => setNotificationOpen(false)}
+                      >
+                        View all notifications
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Profile */}
               <div className="relative" ref={profileRef}>
-                <button 
+                <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center space-x-2 focus:outline-none"
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 focus:outline-none"
                 >
                   <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
                     {user?.photoURL ? (
@@ -229,7 +314,7 @@ export default function PatientLayout() {
                   </span>
                 </button>
 
-                {/* Dropdown menu */}
+                {/* Dropdown menu */}   
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50">
                     <Link
