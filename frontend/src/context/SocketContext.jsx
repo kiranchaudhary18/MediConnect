@@ -12,15 +12,19 @@ export const useSocket = () => {
   return context
 }
 
+// Add a small delay function
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const SocketProvider = ({ children }) => {
   const { user, token } = useAuth()
   const [socket, setSocket] = useState(null)
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const MAX_RETRIES = 3;
 
-  useEffect(() => {
-    // Only connect if user is authenticated
-    if (!user || !token) {
-      console.log('WebSocket: Not connecting - missing user or token');
-      return;
+  const connectWebSocket = useCallback(async () => {
+    if (!token) {
+      console.log('WebSocket: No token available, skipping connection');
+      return null;
     }
     
     // Use the deployed backend URL
@@ -28,17 +32,20 @@ export const SocketProvider = ({ children }) => {
     
     console.log('WebSocket: Attempting to connect to:', backendUrl);
     
-    const newSocket = io(backendUrl, {
+    try {
+      const newSocket = io(backendUrl, {
       withCredentials: true,
       // Try websocket first, then fallback to polling
       transports: ['websocket', 'polling'],
       // Enable reconnection
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       // Timeout for connection attempt
-      timeout: 20000,
+      timeout: 15000,
       // Enable auto connect
       autoConnect: true,
       // Add authentication
@@ -47,80 +54,143 @@ export const SocketProvider = ({ children }) => {
       },
       // Add query parameters if needed
       query: {
-        'x-client-version': '1.0.0'
+        'x-client-version': '1.0.0',
+        'x-auth-token': token
       }
     });
 
-    // Connection established
-    newSocket.on('connect', () => {
-      console.log('WebSocket: Connected to server');
-      console.log('WebSocket ID:', newSocket.id);
+    // Wrap in a promise to handle connection state
+    return new Promise((resolve) => {
+      const onConnect = () => {
+        console.log('WebSocket: Connected to server');
+        console.log('WebSocket ID:', newSocket.id);
+        
+        // Remove this listener to prevent memory leaks
+        newSocket.off('connect', onConnect);
+        
+        // Emit authentication event if needed
+        if (token) {
+          console.log('WebSocket: Sending authentication...');
+          newSocket.emit('authenticate', { token }, (response) => {
+            console.log('WebSocket: Authentication response:', response);
+            if (response && response.success) {
+              console.log('WebSocket: Authentication successful');
+              resolve(newSocket);
+            } else {
+              console.error('WebSocket: Authentication failed', response?.error);
+              newSocket.disconnect();
+              resolve(null);
+            }
+          });
+        } else {
+          resolve(newSocket);
+        }
+      };
       
-      // Emit authentication event if needed
-      if (token) {
-        console.log('WebSocket: Sending authentication...');
-        newSocket.emit('authenticate', { token }, (response) => {
-          console.log('WebSocket: Authentication response:', response);
-        });
+      // Set up connection timeout
+      const timeout = setTimeout(() => {
+        console.error('WebSocket: Connection timeout');
+        newSocket.off('connect', onConnect);
+        newSocket.disconnect();
+        resolve(null);
+      }, 10000);
+      
+      // Set up connection handler
+      newSocket.on('connect', onConnect);
+      
+      // Set up error handler
+      const onError = (err) => {
+        console.error('WebSocket: Connection error:', err);
+        clearTimeout(timeout);
+        newSocket.off('connect', onConnect);
+        newSocket.off('connect_error', onError);
+        resolve(null);
+      };
+      
+      newSocket.on('connect_error', onError);
+    });
+  } catch (error) {
+    console.error('WebSocket: Connection setup error:', error);
+    return null;
+  }
+
+    // Main effect to handle WebSocket connection
+  useEffect(() => {
+    let isMounted = true;
+    let socketInstance = null;
+    let retryCount = 0;
+
+    const setupWebSocket = async () => {
+      // Don't attempt to connect if we've exceeded max retries
+      if (retryCount >= MAX_RETRIES) {
+        console.error('WebSocket: Max retry attempts reached');
+        return;
       }
-    });
 
-    // Connection error
-    newSocket.on('connect_error', (err) => {
-      console.error('WebSocket: Connection error:', {
-        message: err.message,
-        description: err.description,
-        context: err.context,
-        stack: err.stack
-      });
-      
-      // Try to reconnect with a delay
-      setTimeout(() => {
-        console.log('WebSocket: Attempting to reconnect...');
-        newSocket.connect();
-      }, 1000);
-    });
+      // Only connect if we have a token and the component is still mounted
+      if (!token || !isMounted) return;
 
-    // Connection closed
-    newSocket.on('disconnect', (reason) => {
-      console.log('WebSocket: Disconnected. Reason:', reason);
-      
-      // If the server disconnects us, try to reconnect
-      if (reason === 'io server disconnect') {
-        console.log('WebSocket: Server requested disconnection. Will attempt to reconnect...');
-        newSocket.connect();
+      try {
+        console.log(`WebSocket: Connection attempt ${retryCount + 1}/${MAX_RETRIES}`);
+        
+        // Attempt to connect
+        socketInstance = await connectWebSocket();
+        
+        if (socketInstance && isMounted) {
+          // Set up event handlers
+          socketInstance.on('disconnect', (reason) => {
+            console.log('WebSocket: Disconnected. Reason:', reason);
+            if (reason === 'io server disconnect') {
+              // Server requested disconnection, try to reconnect
+              console.log('WebSocket: Server requested disconnection. Will attempt to reconnect...');
+              setupWebSocket();
+            }
+          });
+
+          socketInstance.on('error', (error) => {
+            console.error('WebSocket: Error:', error);
+          });
+
+          // Update the socket in state
+          setSocket(socketInstance);
+          setConnectionAttempts(0); // Reset retry counter on successful connection
+        } else if (isMounted) {
+          // Connection failed, retry with backoff
+          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
+          console.log(`WebSocket: Retrying in ${backoffTime}ms...`);
+          
+          await delay(backoffTime);
+          retryCount++;
+          setConnectionAttempts(retryCount);
+          setupWebSocket();
+        }
+      } catch (error) {
+        console.error('WebSocket: Setup error:', error);
+        if (isMounted && retryCount < MAX_RETRIES) {
+          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
+          console.log(`WebSocket: Retrying after error in ${backoffTime}ms...`);
+          
+          await delay(backoffTime);
+          retryCount++;
+          setConnectionAttempts(retryCount);
+          setupWebSocket();
+        }
       }
-    });
-    
-    // General error
-    newSocket.on('error', (error) => {
-      console.error('WebSocket: Error:', {
-        message: error.message,
-        stack: error.stack
-      });
-    });
+    };
 
-    // Log when reconnection is attempted
-    newSocket.io.on('reconnect_attempt', (attempt) => {
-      console.log(`WebSocket: Reconnection attempt ${attempt}`);
-    });
-
-    // Log when reconnection fails
-    newSocket.io.on('reconnect_failed', () => {
-      console.error('WebSocket: Reconnection failed after all attempts');
-    });
-
-    // Store the socket in state
-    setSocket(newSocket);
+    // Initial connection attempt
+    setupWebSocket();
 
     // Cleanup function
     return () => {
-      console.log('WebSocket: Cleaning up...');
-      if (newSocket) {
-        newSocket.off(); // Remove all listeners
-        newSocket.close();
+      isMounted = false;
+      if (socketInstance) {
+        console.log('WebSocket: Cleaning up...');
+        socketInstance.off();
+        socketInstance.disconnect();
       }
     };
+  }, [token, connectWebSocket]);
   }, [user, token]); // Re-run effect when user or token changes
 
   return (
