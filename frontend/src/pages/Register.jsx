@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, UserPlus, Stethoscope } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, UserPlus, Stethoscope, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Register = () => {
