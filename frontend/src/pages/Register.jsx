@@ -6,18 +6,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Register = () => {
   const [role, setRole] = useState('patient')
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+  const [formData, setFormData] = useState(() => ({
+    name: localStorage.getItem('register_name') || '',
+    email: localStorage.getItem('register_email') || '',
     password: '',
     confirmPassword: '',
     specialization: '',
     year: '',
-    age: '',
-    gender: '',
-    contact: '',
+    age: localStorage.getItem('register_age') || '',
+    gender: localStorage.getItem('register_gender') || '',
+    contact: localStorage.getItem('register_contact') || '',
     bio: ''
-  })
+  }))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -66,8 +66,22 @@ const Register = () => {
   }
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-    setError('') // Clear error when user types
+    const { name, value } = e.target;
+    
+    // Save important fields to localStorage
+    if (['name', 'email', 'age', 'gender', 'contact'].includes(name)) {
+      localStorage.setItem(`register_${name}`, value);
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error if there was one
+    if (error) {
+      setError('');
+    }
   }
 
   // Animation variants for form steps
@@ -90,7 +104,7 @@ const Register = () => {
   const nextStep = () => {
     // Basic validation for step 1
     if (step === 1) {
-      if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+      if (!formData.name?.trim() || !formData.email?.trim() || !formData.password || !formData.confirmPassword) {
         setError('Please fill in all required fields');
         return;
       }
@@ -102,20 +116,48 @@ const Register = () => {
         setError('Password must be at least 6 characters');
         return;
       }
+      if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        setError('Please enter a valid email address');
+        return;
+      }
       setError('');
     }
-    setStep(step + 1);
+    
+    // Additional validation for step 2
+    if (step === 2) {
+      if (!formData.age || !formData.gender || !formData.contact) {
+        setError('Please fill in all required fields');
+        return;
+      }
+      if (role === 'doctor' && !formData.specialization) {
+        setError('Please enter your specialization');
+        return;
+      }
+      if (role === 'student' && !formData.year) {
+        setError('Please select your year of study');
+        return;
+      }
+      setError('');
+    }
+    
+    // Proceed to next step
+    setStep(prevStep => prevStep + 1);
   };
 
   // Handle previous step
   const prevStep = () => {
-    setStep(step - 1);
-    setError('');
+    setStep(prevStep => {
+      // Clear error and go back
+      setError('');
+      return prevStep - 1;
+    });
   };
 
   // Handle role selection
   const selectRole = (selectedRole) => {
     setRole(selectedRole);
+    // Save role to localStorage
+    localStorage.setItem('register_role', selectedRole);
     setError('');
   };
 

@@ -19,7 +19,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // Only connect in production or when explicitly needed
     if (process.env.NODE_ENV === 'production') {
-      const newSocket = io('http://localhost:5000', {
+      const newSocket = io('https://mediconnect-sign-up-in2.onrender.com', {
         withCredentials: true,
         transports: ['websocket'],
         reconnection: true,
