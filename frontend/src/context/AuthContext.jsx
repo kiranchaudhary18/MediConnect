@@ -156,6 +156,9 @@ export const AuthProvider = ({ children }) => {
       setUser(null)
       delete axios.defaults.headers.common['Authorization']
       toast.success('Logged out successfully!')
+      
+      // Redirect to home page after logout
+      window.location.href = '/';
     }
   }
 
