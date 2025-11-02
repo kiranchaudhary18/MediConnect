@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { io } from 'socket.io-client'
 import { useAuth } from './AuthContext'
 
@@ -40,8 +40,6 @@ export const SocketProvider = ({ children }) => {
       // Enable reconnection
       reconnection: true,
       reconnectionAttempts: 3,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       // Timeout for connection attempt
