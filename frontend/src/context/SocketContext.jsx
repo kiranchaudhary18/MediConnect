@@ -27,8 +27,10 @@ export const SocketProvider = ({ children }) => {
       return null;
     }
     
-    // Use the deployed backend URL
-    const backendUrl = 'https://mediconnect-sign-up-in2.onrender.com';
+    // Use the deployed backend URL in production, otherwise use the local development URL
+    const backendUrl = process.env.NODE_ENV === 'production'
+      ? 'https://mediconnect-sign-up-in2.onrender.com'
+      : 'http://localhost:5000';
     
     console.log('WebSocket: Attempting to connect to:', backendUrl);
     
