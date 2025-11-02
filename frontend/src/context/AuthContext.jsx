@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import axios from '../utils/axios'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext()
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadUser = async () => {
     try {
-      const response = await axios.get('/api/auth/me')
+      const response = await axios.get('/auth/me')
       if (response.data.success) {
         setUser(response.data.user)
       } else {
@@ -88,10 +88,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, rememberMe = false) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password })
+      const response = await axios.post('/auth/login', { email, password })
+      console.log('Login response:', response.data) // Debug log
       
       if (response.data.success) {
         const { token: newToken, user: userData } = response.data
+        console.log('Login successful, user data:', userData) // Debug log
         
         if (rememberMe) {
           localStorage.setItem('token', newToken)
@@ -99,10 +101,15 @@ export const AuthProvider = ({ children }) => {
           sessionStorage.setItem('token', newToken)
         }
         
+        // Ensure user data is properly set in state
         setToken(newToken)
         setUser(userData)
         toast.success('Logged in successfully!')
-        return { success: true, user: userData }
+        return { 
+          success: true, 
+          user: userData,
+          role: userData.role // Ensure role is included in the return value
+        }
       } else {
         toast.error(response.data.message || 'Login failed')
         return { success: false, message: response.data.message }
@@ -117,7 +124,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post('/api/auth/register', userData)
+      const response = await axios.post('/auth/register', userData)
       
       if (response.data.success) {
         const { token: newToken, user: newUser } = response.data

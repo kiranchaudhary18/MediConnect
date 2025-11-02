@@ -27,36 +27,40 @@ export const SocketProvider = ({ children }) => {
       return null;
     }
     
-    // Use the deployed backend URL in production, otherwise use the local development URL
-    const backendUrl = process.env.NODE_ENV === 'production'
-      ? 'https://mediconnect-sign-up-in2.onrender.com'
-      : 'http://localhost:5000';
+    // Use the same base URL as configured in axios for consistency
+    const baseURL = import.meta.env.VITE_API_URL || 'https://mediconnect-sign-up-in2.onrender.com';
+    // Create WebSocket URL by replacing http/https with ws/wss
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const backendUrl = baseURL.replace(/^https?:/, wsProtocol);
     
     console.log('WebSocket: Attempting to connect to:', backendUrl);
     
     try {
+      console.log('WebSocket: Creating new connection to', backendUrl);
+      
       const newSocket = io(backendUrl, {
-      withCredentials: true,
-      // Try websocket first, then fallback to polling
-      transports: ['websocket', 'polling'],
-      // Enable reconnection
-      reconnection: true,
-      reconnectionAttempts: 3,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      // Timeout for connection attempt
-      timeout: 15000,
-      // Enable auto connect
-      autoConnect: true,
-      // Add authentication
-      auth: {
-        token: token
-      },
-      // Add query parameters if needed
-      query: {
-        'x-client-version': '1.0.0',
-        'x-auth-token': token
-      }
+        path: '/socket.io',  // Ensure this matches your server's socket.io path
+        withCredentials: true,
+        // Try websocket first, then fallback to polling
+        transports: ['websocket', 'polling'],
+        // Enable reconnection
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        // Timeout for connection attempt
+        timeout: 20000,
+        // Enable auto connect
+        autoConnect: true,
+        // Add authentication
+        auth: {
+          token: token
+        },
+        // Add query parameters if needed
+        query: {
+          'x-client-version': '1.0.0',
+          'x-auth-token': token
+        }
     });
 
     // Wrap in a promise to handle connection state

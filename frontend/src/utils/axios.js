@@ -1,13 +1,18 @@
 import axios from 'axios'
 
-// Use the deployed backend URL in production, otherwise use the proxy
-const baseURL = process.env.NODE_ENV === 'production' 
-  ? 'https://mediconnect-sign-up-in2.onrender.com/api' 
-  : '/api';
+// Use environment variables for API URL
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+console.log('Using API URL:', baseURL);
 
 const axiosInstance = axios.create({
   baseURL,
-})
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+});
 
 // Add token to requests
 axiosInstance.interceptors.request.use((config) => {
