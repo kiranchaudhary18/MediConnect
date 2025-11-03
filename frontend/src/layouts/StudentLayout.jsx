@@ -23,6 +23,8 @@ const StudentLayout = () => {
   const { darkMode, toggleDarkMode } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
   const location = useLocation();
