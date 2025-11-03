@@ -200,23 +200,31 @@ const StudentLayout = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleDarkMode}
-                className="p-2 text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className={`p-2 rounded-full ${
+                  darkMode 
+                    ? 'hover:bg-gray-700 text-yellow-400' 
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                } transition-all duration-200 w-10 h-10 flex items-center justify-center`}
                 aria-label="Toggle dark mode"
               >
                 {darkMode ? (
-                  <Sun className="w-5 h-5" />
+                  <Sun className="w-6 h-6 text-yellow-400" />
                 ) : (
-                  <Moon className="w-5 h-5" />
+                  <Moon className="w-6 h-6 text-indigo-600" />
                 )}
               </button>
               
               <div className="relative" ref={notificationRef}>
                 <button 
                   onClick={() => setNotificationOpen(!notificationOpen)}
-                  className="p-2 text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                  className={`p-2 rounded-full relative ${
+                    darkMode 
+                      ? 'hover:bg-gray-700 text-white' 
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                  } transition-all duration-200 w-10 h-10 flex items-center justify-center`}
                   aria-label="Notifications"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-6 h-6" />
                   <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
                 </button>
                 
