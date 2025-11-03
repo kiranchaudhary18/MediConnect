@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useTheme } from 'react';
+import { useState, useRef, useEffect} from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -16,6 +16,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const StudentLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
