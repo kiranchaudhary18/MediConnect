@@ -30,24 +30,38 @@ const allowedOrigins = [
   'https://mediconnect-sign-up-in2.onrender.com',
   'https://mediconnect-frontend.onrender.com',
   'http://localhost:3000',
-  'http://127.0.0.1:5173', // Alternative localhost
-  'http://127.0.0.1:3000'  // Alternative localhost
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
 ];
 
-// Enable CORS pre-flight
-app.options('*', cors());
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      return callback(null, true);
+// Enable CORS pre-flight with specific origin
+app.options('*', cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    console.log('Blocked CORS request from:', origin);
-    return callback(new Error('Not allowed by CORS'), false);
+  },
+  credentials: true
+}));
+
+// Apply CORS middleware with specific configuration
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      console.log('Blocked CORS request from:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+};
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
   allowedHeaders: [
     'Content-Type',
