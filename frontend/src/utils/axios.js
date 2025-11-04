@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Use environment variables for API URL
-const baseURL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
+const baseURL = `${import.meta.env.VITE_API_URL || 'https://mediconnect-sign-up-in2.onrender.com'}/api`;
 
 console.log('Using API URL:', baseURL);
 
