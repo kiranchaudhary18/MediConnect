@@ -88,31 +88,39 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, rememberMe = false) => {
     try {
-      const response = await axios.post('/auth/login', { email, password })
-      console.log('Login response:', response.data) // Debug log
+      const response = await axios.post('/auth/login', { 
+        email: email.trim(),
+        password: password
+      });
       
-      if (response.data.success) {
-        const { token: newToken, user: userData } = response.data
-        console.log('Login successful, user data:', userData) // Debug log
+      if (response.data && response.data.success) {
+        const { token: newToken, user: userData } = response.data;
         
-        if (rememberMe) {
-          localStorage.setItem('token', newToken)
-        } else {
-          sessionStorage.setItem('token', newToken)
-        }
+        // Store token based on rememberMe preference
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('token', newToken);
         
-        // Ensure user data is properly set in state
-        setToken(newToken)
-        setUser(userData)
-        toast.success('Logged in successfully!')
+        // Set default auth header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        
+        // Update state
+        setToken(newToken);
+        setUser(userData);
+        console.log('Login successful');
+        toast.success('Logged in successfully!');
+        
         return { 
           success: true, 
           user: userData,
-          role: userData.role // Ensure role is included in the return value
-        }
+          role: userData.role
+        };
       } else {
-        toast.error(response.data.message || 'Login failed')
-        return { success: false, message: response.data.message }
+        const errorMessage = response.data?.message || 'Login failed';
+        toast.error(errorMessage);
+        return { 
+          success: false, 
+          message: errorMessage 
+        };
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -131,6 +139,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', newToken)
         setToken(newToken)
         setUser(newUser)
+        console.log('Registration successful')
         toast.success('Registered successfully!')
         return { success: true, user: newUser }
       } else {
