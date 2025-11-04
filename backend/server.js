@@ -16,17 +16,11 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true
-  }
-});
 
-// CORS configuration
+// Allowed frontend origins
 const allowedOrigins = [
-  'https://mediconnect-in.onrender.com',
-  'http://localhost:5173',
+  'https://mediconnect-in.onrender.com',  // deployed frontend
+  'http://localhost:5173',                // local frontend
   'https://mediconnect-sign-up-in2.onrender.com',
   'https://mediconnect-frontend.onrender.com',
   'http://localhost:3000',
@@ -34,49 +28,24 @@ const allowedOrigins = [
   'http://127.0.0.1:3000'
 ];
 
-// Enable CORS pre-flight with specific origin
-app.options('*', cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
-
-// Apply CORS middleware with specific configuration
+// CORS middleware
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      callback(null, true);
-    } else {
-      console.log('Blocked CORS request from:', origin);
-      callback(new Error('Not allowed by CORS'));
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true); // allow Postman / curl / mobile apps
+    if (allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
     }
+    console.log('Blocked CORS request from:', origin);
+    return callback(new Error('Not allowed by CORS'), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
-};
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
     'Accept',
-    'Origin',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Allow-Credentials',
-    'Accept',
-    'Origin',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Request-Method',
-    'Access-Control-Request-Headers'
+    'Origin'
   ],
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
   maxAge: 86400, // 24 hours
@@ -84,8 +53,10 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-// Middleware
+// Apply CORS before all routes
 app.use(cors(corsOptions));
+
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -119,14 +90,14 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Test endpoint to check MongoDB connection and database operations
+// Test MongoDB connection
 app.get('/api/test/db', async (req, res) => {
   try {
     const User = (await import('./models/User.js')).default;
-    
+
     const dbState = mongoose.connection.readyState;
     const isConnected = dbState === 1;
-    
+
     if (!isConnected) {
       return res.status(503).json({
         success: false,
@@ -135,12 +106,9 @@ app.get('/api/test/db', async (req, res) => {
       });
     }
 
-    // Try to count users
     const userCount = await User.countDocuments();
-    
-    // Try to find one user
     const sampleUser = await User.findOne().select('name email role').lean();
-    
+
     res.json({
       success: true,
       message: 'Database connection working',
@@ -168,70 +136,47 @@ app.get('/api/test/db', async (req, res) => {
 });
 
 // Setup Socket.io
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
+  }
+});
 setupSocket(io);
 
-// Connect to MongoDB with proper configuration
+// Connect to MongoDB
 const connectDB = async () => {
   try {
-    if (!process.env.DB_URI) {
-      throw new Error('DB_URI is not defined in environment variables');
-    }
+    if (!process.env.DB_URI) throw new Error('DB_URI is not defined in environment variables');
 
     const conn = await mongoose.connect(process.env.DB_URI, {
-      // Connection options for better reliability
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
       retryWrites: true,
       w: 'majority'
     });
 
-    console.log(`✅ MongoDB connected successfully!`);
-    console.log(`📍 Database: ${conn.connection.name}`);
-    console.log(`🔗 Host: ${conn.connection.host}`);
-    
-    // Handle MongoDB connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
-    });
+    console.log(`✅ MongoDB connected! Database: ${conn.connection.name}, Host: ${conn.connection.host}`);
 
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ MongoDB disconnected. Attempting to reconnect...');
-    });
-
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected');
-    });
+    mongoose.connection.on('error', (err) => console.error('❌ MongoDB connection error:', err));
+    mongoose.connection.on('disconnected', () => console.warn('⚠️ MongoDB disconnected. Reconnecting...'));
+    mongoose.connection.on('reconnected', () => console.log('✅ MongoDB reconnected'));
 
     return true;
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
-    console.error('💡 Please check:');
-    console.error('   1. MongoDB is running');
-    console.error('   2. DB_URI is correct in .env file');
-    console.error('   3. Network connectivity');
     process.exit(1);
   }
 };
 
-// Start server only after MongoDB is connected
+// Start server after MongoDB connects
 const startServer = async () => {
-  try {
-    // Connect to MongoDB first
-    await connectDB();
-    
-    // Start server after successful connection
-    const PORT = process.env.PORT || 5000;
-    httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
+  await connectDB();
+  const PORT = process.env.PORT || 5000;
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 };
 
-// Start the application
 startServer();
-
-
