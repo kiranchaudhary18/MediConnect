@@ -28,26 +28,36 @@ const allowedOrigins = [
   'https://mediconnect-in.onrender.com',
   'http://localhost:5173',
   'https://mediconnect-sign-up-in2.onrender.com',
-  'https://mediconnect-frontend.onrender.com', // Add your frontend URL here
-  'http://localhost:3000' // Common React development port
+  'https://mediconnect-frontend.onrender.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173', // Alternative localhost
+  'http://127.0.0.1:3000'  // Alternative localhost
 ];
+
+// Enable CORS pre-flight
+app.options('*', cors());
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    console.log('Blocked CORS request from:', origin);
+    return callback(new Error('Not allowed by CORS'), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Credentials',
     'Accept',
     'Origin',
     'Access-Control-Allow-Headers',
