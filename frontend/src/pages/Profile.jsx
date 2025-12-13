@@ -44,10 +44,27 @@ const Profile = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image size should be less than 2MB');
+        return;
+      }
+      
+      // Check file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Only JPEG, PNG, and GIF images are allowed');
+        return;
+      }
+      
       setProfileImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
+      };
+      reader.onerror = () => {
+        console.error('Error reading file');
+        toast.error('Error reading the image file');
       };
       reader.readAsDataURL(file);
     }
@@ -58,11 +75,33 @@ const Profile = () => {
     setIsLoading(true);
     
     try {
-      await updateProfile({
-        ...formData,
-        photoFile: profileImage
-      });
-      toast.success('Profile updated successfully!');
+      console.log('Submitting form with data:', formData);
+      console.log('Profile image:', profileImage);
+      
+      const updateData = { ...formData };
+      
+      // Only include the image if it's a new one
+      if (profileImage) {
+        updateData.photoFile = profileImage;
+      }
+      
+      console.log('Sending update data:', updateData);
+      
+      const result = await updateProfile(updateData);
+      
+      if (result.success) {
+        toast.success('Profile updated successfully!');
+        
+        // Update the form data with the returned user data
+        if (result.user) {
+          setFormData(prev => ({
+            ...prev,
+            ...result.user,
+            // Handle phone/contact mapping
+            phone: result.user.phone || prev.phone
+          }));
+        }
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error(error.message || 'Failed to update profile');

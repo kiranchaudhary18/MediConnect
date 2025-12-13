@@ -4,6 +4,8 @@ import toast from 'react-hot-toast'
 
 const AuthContext = createContext()
 
+export { AuthContext }
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -56,33 +58,59 @@ export const AuthProvider = ({ children }) => {
     try {
       const formData = new FormData();
       
+      console.log('Updating profile with data:', data);
+      
       // Append all form fields to FormData
       Object.keys(data).forEach(key => {
         if (key === 'photoFile' && data.photoFile) {
           formData.append('image', data.photoFile);
+          console.log('Appended image file:', data.photoFile.name);
         } else if (data[key] !== undefined && data[key] !== null) {
-          formData.append(key, data[key]);
+          // Map phone to contact for the backend
+          if (key === 'phone') {
+            formData.append('contact', data[key]);
+            console.log('Appended contact:', data[key]);
+          } else if (key !== 'photoFile') { // Skip photoFile as it's handled separately
+            formData.append(key, data[key]);
+            console.log(`Appended ${key}:`, data[key]);
+          }
         }
       });
 
-      const response = await axios.put('/api/auth/profile', formData, {
+      // Get the token from storage
+      const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
+      const token = storage.getItem('token');
+
+      console.log('Sending update request to /auth/profile');
+      const response = await axios.put('/auth/profile', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         },
       });
 
-      if (response.data.success) {
-        setUser(prev => ({
-          ...prev,
+      console.log('Update profile response:', response.data);
+
+      if (response.data && response.data.success) {
+        // Update the user in context
+        const updatedUser = {
           ...response.data.user,
-        }));
-        toast.success('Profile updated successfully');
-        return { success: true };
+          // Map contact back to phone for frontend
+          phone: response.data.user.contact || (user?.phone || '')
+        };
+        
+        setUser(updatedUser);
+        
+        // Update localStorage if needed
+        const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
+        storage.setItem('user', JSON.stringify(updatedUser));
+        
+        return { success: true, user: updatedUser };
       }
     } catch (error) {
       console.error('Update profile error:', error);
-      toast.error(error.response?.data?.message || 'Failed to update profile');
-      throw error;
+      const errorMessage = error.response?.data?.message || 'Failed to update profile';
+      throw new Error(errorMessage);
     }
   };
 
@@ -130,21 +158,40 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const register = async (userData) => {
+  const register = async (userData, rememberMe = false) => {
     try {
       const response = await axios.post('/auth/register', userData)
       
-      if (response.data.success) {
-        const { token: newToken, user: newUser } = response.data
-        localStorage.setItem('token', newToken)
-        setToken(newToken)
-        setUser(newUser)
-        console.log('Registration successful')
-        toast.success('Registered successfully!')
-        return { success: true, user: newUser }
+      if (response.data && response.data.success) {
+        const { token: newToken, user: userData } = response.data;
+        
+        // Store token based on rememberMe preference
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('token', newToken);
+        storage.setItem('user', JSON.stringify(userData));
+        
+        // Set default auth header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        
+        // Update state
+        setToken(newToken);
+        setUser(userData);
+        
+        console.log('Registration successful');
+        toast.success('Registered successfully!');
+        
+        return { 
+          success: true, 
+          user: userData,
+          role: userData.role 
+        };
       } else {
-        toast.error(response.data.message || 'Registration failed')
-        return { success: false, message: response.data.message }
+        const errorMessage = response.data?.message || 'Registration failed';
+        toast.error(errorMessage);
+        return { 
+          success: false, 
+          message: errorMessage 
+        };
       }
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed'
@@ -155,15 +202,21 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post('/api/auth/logout')
+      await axios.post('/auth/logout')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
+      // Clear all auth data
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
       sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
+      
+      // Reset state
       setToken(null)
       setUser(null)
       delete axios.defaults.headers.common['Authorization']
+      
       toast.success('Logged out successfully!')
       
       // Redirect to home page after logout
@@ -173,19 +226,30 @@ export const AuthProvider = ({ children }) => {
 
   const refreshToken = async () => {
     try {
-      const response = await axios.post('/api/auth/refresh')
-      if (response.data.success) {
+      const response = await axios.post('/auth/refresh')
+      if (response.data && response.data.success) {
         const { token: newToken, user: userData } = response.data
-        localStorage.setItem('token', newToken)
+        
+        // Store the new token where the old one was stored
+        const storage = localStorage.getItem('token') ? localStorage : sessionStorage
+        storage.setItem('token', newToken)
+        storage.setItem('user', JSON.stringify(userData))
+        
+        // Update state and axios headers
         setToken(newToken)
         setUser(userData)
-        return true
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+        
+        return newToken
+      } else {
+        throw new Error('Failed to refresh token')
       }
     } catch (error) {
-      console.error('Token refresh error:', error)
+      console.error('Refresh token error:', error)
+      // If refresh fails, logout the user
       logout()
     }
-    return false
+    return null
   }
 
   const value = {

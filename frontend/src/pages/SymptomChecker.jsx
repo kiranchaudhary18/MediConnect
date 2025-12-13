@@ -1,8 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useContext } from 'react';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 import Navbar from '../components/Navbar';
-import { Send, Bot, User, AlertCircle, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
 
 const SymptomChecker = () => {
+  const { authToken } = useContext(AuthContext);
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -24,197 +28,68 @@ const SymptomChecker = () => {
     return /[\u0900-\u097F]/.test(text);
   };
 
-  const analyzeSymptoms = (e) => {
+  const analyzeSymptoms = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
-    // Add user message with language preference
+    // Add user message
     const userMessage = { 
       role: 'user', 
       content: input,
-      language: responseLanguage
+      language: isHindi(input) ? 'hi' : 'en'
     };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
-    // Check if input is in Hindi
-    const isHindiInput = isHindi(input);
-    const symptoms = input.toLowerCase();
-
-    // Simulate API call delay
-    setTimeout(() => {
-      try {
-        let conditions = [];
-        let recommendations = [];
-
-        // Simple symptom matching with Hindi support
-        if (symptoms.includes('fever') || symptoms.includes('bukhār') || symptoms.includes('बुखार')) {
-          if (symptoms.includes('cough') || symptoms.includes('khānsi') || symptoms.includes('खांसी')) {
-            conditions = isHindiInput 
-              ? ['सामान्य सर्दी', 'फ्लू (इन्फ्लुएंजा)', 'कोविड-१९'] 
-              : ['Common cold', 'Flu (Influenza)', 'COVID-19'];
-            recommendations = isHindiInput
-              ? [
-                  'भरपूर आराम करें',
-                  'खूब पानी पिएं',
-                  'बुखार के लिए पैरासिटामोल लें',
-                  'यदि 3 दिन से अधिक समय तक लक्षण बने रहें तो डॉक्टर से परामर्श करें'
-                ]
-              : [
-                  'Get plenty of rest',
-                  'Stay hydrated',
-                  'Take paracetamol for fever',
-                  'Consult a doctor if symptoms worsen or persist for more than 3 days'
-                ];
-          } else if (symptoms.includes('headache') || symptoms.includes('sir dard') || symptoms.includes('सिरदर्द')) {
-            conditions = isHindiInput
-              ? ['वायरल बुखार', 'साइनस इन्फेक्शन', 'माइग्रेन']
-              : ['Viral fever', 'Sinus infection', 'Migraine'];
-            recommendations = isHindiInput
-              ? [
-                  'शांत, अंधेरे कमरे में आराम करें',
-                  'माथे पर ठंडा कपड़ा रखें',
-                  'दर्द निवारक दवा लें',
-                  'पानी खूब पिएं और कैफीन से बचें'
-                ]
-              : [
-                  'Rest in a quiet, dark room',
-                  'Apply a cool compress to your forehead',
-                  'Take over-the-counter pain relievers',
-                  'Stay hydrated and avoid caffeine'
-                ];
-          } else {
-            conditions = isHindiInput
-              ? ['वायरल बुखार', 'बैक्टीरियल इन्फेक्शन', 'लू लगना']
-              : ['Viral fever', 'Bacterial infection', 'Heat exhaustion'];
-            recommendations = isHindiInput
-              ? [
-                  'बुखार कम करने की दवा लें',
-                  'खूब सारा तरल पदार्थ पिएं',
-                  'पूरा आराम करें',
-                  'अगर बुखार 103°F (39.4°C) से अधिक हो या 3 दिन से ज्यादा रहे तो डॉक्टर को दिखाएं'
-                ]
-              : [
-                  'Take a fever reducer like paracetamol',
-                  'Drink plenty of fluids',
-                  'Get adequate rest',
-                  'See a doctor if fever is above 103°F (39.4°C) or lasts more than 3 days'
-                ];
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/ai/analyze-symptoms',
+        {
+          symptoms: [input],
+          age: 30, // Can be dynamic based on user profile
+          gender: 'unknown', // Can be dynamic based on user profile
+          medicalHistory: '', // Can be added from user profile
+          language: userMessage.language
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
           }
-        } else if (symptoms.includes('stomach') || symptoms.includes('pet') || symptoms.includes('पेट')) {
-          if (symptoms.includes('vomit') || symptoms.includes('ulti') || symptoms.includes('उल्टी')) {
-            conditions = isHindiInput
-              ? ['गैस्ट्रोएंटेराइटिस', 'फूड पॉइजनिंग', 'पेट का फ्लू']
-              : ['Gastroenteritis', 'Food poisoning', 'Stomach flu'];
-            recommendations = isHindiInput
-              ? [
-                  'थोड़ी मात्रा में साफ तरल पदार्थ पिएं',
-                  'उल्टी रुकने तक ठोस आहार न लें',
-                  'केला, चावल, सेब का सॉस, टोस्ट (BRAT डाइट) आजमाएं',
-                  'यदि लक्षण गंभीर हों या 2 दिन से अधिक रहें तो डॉक्टर को दिखाएं'
-                ]
-              : [
-                  'Drink clear fluids in small amounts',
-                  'Avoid solid foods until vomiting stops',
-                  'Try the BRAT diet (bananas, rice, applesauce, toast)',
-                  'Seek medical help if symptoms are severe or last more than 2 days'
-                ];
-          } else {
-            conditions = isHindiInput
-              ? ['अपच', 'गैस', 'एसिडिटी']
-              : ['Indigestion', 'Gas', 'Acid reflux'];
-            recommendations = isHindiInput
-              ? [
-                  'थोड़ा-थोड़ा करके अक्सर खाएं',
-                  'तेज मसालेदार या चिकने भोजन से बचें',
-                  'एंटासिड लें',
-                  'खाने के तुरंत बाद न लेटें'
-                ]
-              : [
-                  'Eat smaller, more frequent meals',
-                  'Avoid spicy or fatty foods',
-                  'Try over-the-counter antacids',
-                  'Avoid lying down immediately after eating'
-                ];
-          }
-        } else if (symptoms.includes('cough') || symptoms.includes('khānsi') || symptoms.includes('खांसी')) {
-          conditions = isHindiInput
-            ? ['सामान्य सर्दी', 'एलर्जी', 'ब्रोंकाइटिस']
-            : ['Common cold', 'Allergies', 'Bronchitis'];
-          recommendations = isHindiInput
-            ? [
-                'गर्म तरल पदार्थ पिएं',
-                'ह्यूमिडिफायर का उपयोग करें',
-                'गर्म पानी या चाय में शहद मिलाकर पिएं',
-                'अगर खांसी 3 हफ्ते से अधिक रहे या तेज बुखार के साथ हो तो डॉक्टर को दिखाएं'
-              ]
-            : [
-                'Stay hydrated with warm liquids',
-                'Use a humidifier',
-                'Try honey in warm water or tea',
-                'See a doctor if cough lasts more than 3 weeks or is accompanied by high fever'
-              ];
-        } else {
-          // Generic response for other symptoms
-          conditions = isHindiInput
-            ? ['सामान्य असुविधा', 'हल्की बीमारी', 'वायरल इन्फेक्शन']
-            : ['General discomfort', 'Mild illness', 'Viral infection'];
-          recommendations = isHindiInput
-            ? [
-                'भरपूर आराम करें',
-                'खूब पानी पिएं',
-                'अपने लक्षणों पर नजर रखें',
-                'यदि लक्षण बने रहें या बिगड़ें तो डॉक्टर से परामर्श करें'
-              ]
-            : [
-                'Get plenty of rest',
-                'Stay hydrated',
-                'Monitor your symptoms',
-                'Consult a healthcare professional if symptoms persist or worsen'
-              ];
         }
+      );
 
-        // Use the language from the user's message or fallback to responseLanguage
-        const useHindi = userMessage.language === 'hi' || responseLanguage === 'hi';
-        let response;
-        if (useHindi) {
-          response = `आपके लक्षणों के आधार पर, यहां कुछ संभावित स्थितियां और सुझाव दिए गए हैं:\n\n` +
-                   `*संभावित स्थितियां:*\n${conditions.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n` +
-                   `*सुझाव:*\n${recommendations.map((r, i) => `• ${r}`).join('\n')}\n\n` +
-                   `*महत्वपूर्ण:* यह कोई चिकित्सा निदान नहीं है। सटीक जांच के लिए कृपया किसी योग्य स्वास्थ्य सेवा प्रदाता से परामर्श लें।`;
-        } else {
-          response = `Based on your symptoms, here are some possible conditions and recommendations:\n\n` +
-                   `*Possible Conditions:*\n${conditions.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n` +
-                   `*Recommendations:*\n${recommendations.map((r, i) => `• ${r}`).join('\n')}\n\n` +
-                   `*Important:* This is not a medical diagnosis. Please consult a healthcare professional for an accurate assessment.`;
+      // Add AI response to messages
+      setMessages(prev => [
+        ...prev, 
+        {
+          role: 'assistant',
+          content: response.data.analysis || (userMessage.language === 'hi' 
+            ? 'मैं आपके लक्षणों का विश्लेषण नहीं कर पाया। कृपया पुनः प्रयास करें।' 
+            : 'I couldn\'t analyze the symptoms. Please try again.')
         }
-
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: response
-          }
-        ]);
-      } catch (error) {
-        console.error('Error analyzing symptoms:', error);
-        
-        const errorMessage = isHindiInput
-          ? 'मुझे आपके लक्षणों का विश्लेषण करने में कठिनाई हो रही है। कृपया उन्हें और विस्तार से बताएं या सटीक मूल्यांकन के लिए किसी स्वास्थ्य सेवा प्रदाता से परामर्श लें।'
-          : 'I\'m having trouble analyzing your symptoms. Please try to describe them in more detail or consult a healthcare professional for an accurate assessment.';
-        
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: errorMessage
-          }
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    }, 1000); // Simulate network delay
+      ]);
+    } catch (error) {
+      console.error('Error analyzing symptoms:', error);
+      
+      // Show error message in appropriate language
+      const errorMessage = userMessage.language === 'hi'
+        ? 'माफ़ कीजिए, आपके लक्षणों का विश्लेषण करते समय एक त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।'
+        : 'Sorry, there was an error analyzing your symptoms. Please try again later.';
+      
+      setMessages(prev => [
+        ...prev, 
+        {
+          role: 'assistant',
+          content: errorMessage
+        }
+      ]);
+      
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
