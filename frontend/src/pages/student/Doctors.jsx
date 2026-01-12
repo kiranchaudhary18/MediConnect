@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, User, Stethoscope, Star, MapPin, Calendar, MessageSquare, UserPlus } from 'lucide-react';
+import { Search, Filter, User, Stethoscope, Star, MapPin, Calendar, MessageSquare, UserPlus, X, Mail, Phone, Award, FileText } from 'lucide-react';
+import { getAvailableDoctors } from '../../services/patientService';
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
@@ -7,100 +8,42 @@ const Doctors = () => {
   const [specialtyFilter, setSpecialtyFilter] = useState('all');
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Mock data for doctors
-  const mockDoctors = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      specialty: 'Cardiologist',
-      experience: 12,
-      rating: 4.8,
-      reviews: 124,
-      location: 'New York, NY',
-      avatar: 'SJ',
-      about: 'Board-certified cardiologist with over 12 years of experience in treating heart conditions. Specializes in interventional cardiology and preventive care.',
-      education: 'MD, Harvard Medical School',
-      languages: ['English', 'Spanish']
-    },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      specialty: 'Neurologist',
-      experience: 8,
-      rating: 4.9,
-      reviews: 98,
-      location: 'San Francisco, CA',
-      avatar: 'MC',
-      about: 'Neurology specialist with expertise in treating migraines, epilepsy, and movement disorders. Committed to patient-centered care.',
-      education: 'MD, Stanford University',
-      languages: ['English', 'Mandarin']
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Wilson',
-      specialty: 'Pediatrician',
-      experience: 15,
-      rating: 4.7,
-      reviews: 156,
-      location: 'Chicago, IL',
-      avatar: 'EW',
-      about: 'Pediatric specialist with a gentle approach to children\'s healthcare. Focuses on preventive care and family education.',
-      education: 'MD, Johns Hopkins University',
-      languages: ['English', 'French']
-    },
-    {
-      id: 4,
-      name: 'Dr. Robert Taylor',
-      specialty: 'Orthopedic Surgeon',
-      experience: 20,
-      rating: 4.9,
-      reviews: 210,
-      location: 'Houston, TX',
-      avatar: 'RT',
-      about: 'Orthopedic surgeon specializing in sports medicine and joint replacement. Uses minimally invasive techniques for faster recovery.',
-      education: 'MD, Baylor College of Medicine',
-      languages: ['English', 'Spanish']
-    },
-    {
-      id: 5,
-      name: 'Dr. Lisa Wong',
-      specialty: 'Dermatologist',
-      experience: 10,
-      rating: 4.8,
-      reviews: 178,
-      location: 'Seattle, WA',
-      avatar: 'LW',
-      about: 'Dermatologist with expertise in medical, surgical, and cosmetic dermatology. Special interest in skin cancer prevention.',
-      education: 'MD, University of Washington',
-      languages: ['English', 'Cantonese']
-    },
-    {
-      id: 6,
-      name: 'Dr. James Wilson',
-      specialty: 'Cardiologist',
-      experience: 18,
-      rating: 4.9,
-      reviews: 245,
-      location: 'Boston, MA',
-      avatar: 'JW',
-      about: 'Senior cardiologist with extensive experience in complex cardiac procedures and heart failure management.',
-      education: 'MD, Yale School of Medicine',
-      languages: ['English']
-    },
-  ];
-
-  // Unique specialties for filter
-  const specialties = ['all', ...new Set(mockDoctors.map(doctor => doctor.specialty))];
+  // Unique specialties for filter - derived from real data
+  const specialties = ['all', ...new Set(doctors.map(doctor => doctor.specialty).filter(Boolean))];
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setDoctors(mockDoctors);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    const fetchDoctors = async () => {
+      try {
+        const response = await getAvailableDoctors();
+        // Handle both { data: [...] } and direct array response
+        const data = response?.data || response || [];
+        // Map backend data to expected format
+        const mapped = (Array.isArray(data) ? data : []).map(doc => ({
+          id: doc._id,
+          name: doc.name,
+          email: doc.email,
+          specialty: doc.specialization || 'General Physician',
+          experience: doc.experience || 0,
+          rating: 4.5,
+          reviews: 0,
+          location: doc.address || 'Not specified',
+          avatar: doc.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'DR',
+          about: doc.bio || `Experienced ${doc.specialization || 'medical'} professional dedicated to patient care.`,
+          licenseNumber: doc.licenseNumber || 'Not provided',
+          phone: doc.contact || 'Not provided',
+          photoURL: doc.profilePicture || doc.profilePhoto,
+          joinedDate: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'N/A'
+        }));
+        setDoctors(mapped);
+      } catch (error) {
+        console.error('Error fetching doctors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDoctors();
   }, []);
 
   const filteredDoctors = doctors.filter(doctor => {
@@ -112,12 +55,12 @@ const Doctors = () => {
 
   const openDoctorModal = (doctor) => {
     setSelectedDoctor(doctor);
-    document.getElementById('doctorModal').classList.remove('hidden');
+    setModalOpen(true);
   };
 
   const closeModal = () => {
-    document.getElementById('doctorModal').classList.add('hidden');
-    setTimeout(() => setSelectedDoctor(null), 300);
+    setModalOpen(false);
+    setSelectedDoctor(null);
   };
 
   if (loading) {
@@ -180,37 +123,30 @@ const Doctors = () => {
               <div className="p-6">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <div className="h-16 w-16 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                      <span className="text-xl font-medium text-orange-600 dark:text-orange-300">
-                        {doctor.avatar}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ml-4 flex-1">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {doctor.name}
-                      </h2>
-                      <div className="flex items-center">
-                        <Star className="h-5 w-5 text-yellow-400" fill="currentColor" />
-                        <span className="ml-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {doctor.rating}
-                        </span>
-                        <span className="mx-1 text-gray-400">•</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {doctor.reviews} reviews
+                    {doctor.photoURL ? (
+                      <img 
+                        src={doctor.photoURL} 
+                        alt={doctor.name}
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                        <span className="text-xl font-medium text-orange-600 dark:text-orange-300">
+                          {doctor.avatar}
                         </span>
                       </div>
-                    </div>
+                    )}
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Dr. {doctor.name}
+                    </h2>
                     <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
                       {doctor.specialty}
                     </p>
                     <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
-                      <MapPin className="flex-shrink-0 h-4 w-4" />
-                      <span className="ml-1">{doctor.location}</span>
-                      <span className="mx-2">•</span>
                       <Stethoscope className="flex-shrink-0 h-4 w-4" />
-                      <span className="ml-1">{doctor.experience} years</span>
+                      <span className="ml-1">{doctor.experience} years exp</span>
                     </div>
                   </div>
                 </div>
@@ -221,9 +157,6 @@ const Doctors = () => {
                   >
                     View Profile
                   </button>
-                  <button className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    <UserPlus className="h-5 w-5" />
-                  </button>
                 </div>
               </div>
             </div>
@@ -231,142 +164,118 @@ const Doctors = () => {
         </div>
       )}
 
-      {/* Doctor Modal */}
-      <div
-        id="doctorModal"
-        className="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={(e) => e.target.id === 'doctorModal' && closeModal()}
-      >
-        {selectedDoctor && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      {/* Doctor Profile Modal */}
+      {modalOpen && selectedDoctor && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && closeModal()}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4">
-                  <div className="h-20 w-20 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                    <span className="text-2xl font-medium text-orange-600 dark:text-orange-300">
-                      {selectedDoctor.avatar}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {selectedDoctor.name}
-                    </h2>
-                    <p className="text-orange-600 dark:text-orange-400 font-medium">
-                      {selectedDoctor.specialty}
-                    </p>
-                    <div className="mt-1 flex items-center">
-                      <div className="flex items-center">
-                        <Star className="h-5 w-5 text-yellow-400" fill="currentColor" />
-                        <span className="ml-1 font-medium text-gray-900 dark:text-white">
-                          {selectedDoctor.rating}
-                        </span>
-                        <span className="mx-2 text-gray-400">•</span>
-                        <span className="text-gray-600 dark:text-gray-300">
-                          {selectedDoctor.reviews} reviews
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* Header with close button */}
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Doctor Profile</h2>
                 <button
                   onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  <span className="sr-only">Close</span>
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Doctor Photo & Basic Info */}
+              <div className="flex items-center gap-4 mb-6">
+                {selectedDoctor.photoURL ? (
+                  <img 
+                    src={selectedDoctor.photoURL} 
+                    alt={selectedDoctor.name}
+                    className="h-24 w-24 rounded-full object-cover border-4 border-orange-100 dark:border-orange-900"
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center border-4 border-orange-200 dark:border-orange-800">
+                    <span className="text-3xl font-bold text-orange-600 dark:text-orange-300">
+                      {selectedDoctor.avatar}
+                    </span>
+                  </div>
+                )}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">About</h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {selectedDoctor.about}
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Dr. {selectedDoctor.name}
+                  </h3>
+                  <p className="text-orange-600 dark:text-orange-400 font-medium">
+                    {selectedDoctor.specialty}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {selectedDoctor.experience} years of experience
                   </p>
                 </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <Stethoscope className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Specialty</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDoctor.specialty}</p>
-                      </div>
+              </div>
+
+              {/* Details Grid */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedDoctor.email}</p>
                     </div>
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <Calendar className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Experience</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDoctor.experience} years</p>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <Phone className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedDoctor.phone}</p>
                     </div>
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <MapPin className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Location</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDoctor.location}</p>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <Award className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">License Number</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedDoctor.licenseNumber}</p>
                     </div>
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <MessageSquare className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Languages</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {selectedDoctor.languages.join(', ')}
-                        </p>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Location</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedDoctor.location}</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* About Section */}
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">About</p>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{selectedDoctor.about}</p>
+                </div>
+
+                {/* Member Since */}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <Calendar className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Member Since</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedDoctor.joinedDate}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Education</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {selectedDoctor.education}
-                </p>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
+              {/* Close Button */}
+              <div className="mt-6 flex justify-end">
                 <button
-                  type="button"
-                  className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
                   onClick={closeModal}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
                   Close
-                </button>
-                <button
-                  type="button"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                >
-                  <div className="flex items-center">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send Message
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                >
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Book Appointment
-                  </div>
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

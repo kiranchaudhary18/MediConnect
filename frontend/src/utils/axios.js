@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 // Use environment variables for API URL
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-// Ensure the baseURL doesn't end with a slash to prevent double slashes
-const baseURL = apiUrl.endsWith('/') ? `${apiUrl}api` : `${apiUrl}/api`;
+// Normalize to avoid duplicate /api segments (e.g., preventing /api/api)
+const rawApi = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const normalized = rawApi.replace(/\/+$/, '');
+const baseURL = normalized.endsWith('/api') ? normalized : `${normalized}/api`;
 
 console.log('Using API URL:', baseURL);
 

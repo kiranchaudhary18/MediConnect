@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, FileText, Download, User, Calendar, Info } from 'lucide-react';
+import { Search, Filter, FileText, Download, User, Calendar, Info, X } from 'lucide-react';
+import { getStudentMedicalRecords } from '../../services/patientService';
 
 const PatientRecords = () => {
   const [records, setRecords] = useState([]);
@@ -8,96 +9,48 @@ const PatientRecords = () => {
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Mock data for patient records (anonymized)
-  const mockRecords = [
-    {
-      id: 'PT-1001',
-      age: 45,
-      gender: 'Male',
-      disease: 'Hypertension',
-      treatment: 'Lifestyle modifications, Beta-blockers',
-      doctor: 'Dr. Sarah Johnson',
-      date: '2023-10-15',
-      status: 'Stable',
-      notes: 'Patient responding well to medication. Advised to reduce sodium intake and exercise regularly.'
-    },
-    {
-      id: 'PT-1002',
-      age: 32,
-      gender: 'Female',
-      disease: 'Type 2 Diabetes',
-      treatment: 'Metformin, Dietary changes',
-      doctor: 'Dr. Michael Chen',
-      date: '2023-10-12',
-      status: 'Improving',
-      notes: 'Blood sugar levels showing improvement. Continue current treatment plan with regular monitoring.'
-    },
-    {
-      id: 'PT-1003',
-      age: 58,
-      gender: 'Male',
-      disease: 'COPD',
-      treatment: 'Bronchodilators, Steroids',
-      doctor: 'Dr. Emily Wilson',
-      date: '2023-10-10',
-      status: 'Stable',
-      notes: 'Lung function tests show slight improvement. Continue with inhaler therapy and pulmonary rehab.'
-    },
-    {
-      id: 'PT-1004',
-      age: 67,
-      gender: 'Female',
-      disease: 'Osteoarthritis',
-      treatment: 'Physical therapy, NSAIDs',
-      doctor: 'Dr. Robert Taylor',
-      date: '2023-10-08',
-      status: 'Improving',
-      notes: 'Patient reports reduced pain with current treatment. Continue with physical therapy exercises.'
-    },
-    {
-      id: 'PT-1005',
-      age: 29,
-      gender: 'Female',
-      disease: 'Migraine',
-      treatment: 'Triptans, Preventive therapy',
-      doctor: 'Dr. Sarah Johnson',
-      date: '2023-10-05',
-      status: 'Ongoing',
-      notes: 'Patient experiencing fewer migraine days. Adjusting preventive medication dosage.'
-    },
-    {
-      id: 'PT-1006',
-      age: 52,
-      gender: 'Male',
-      disease: 'Coronary Artery Disease',
-      treatment: 'Statins, Beta-blockers, Aspirin',
-      doctor: 'Dr. James Wilson',
-      date: '2023-10-01',
-      status: 'Stable',
-      notes: 'Stable condition post-angioplasty. Continue with cardiac rehab and medication.'
-    },
-  ];
-
-  // Get unique diseases and doctors for filters
-  const diseases = ['all', ...new Set(mockRecords.map(record => record.disease))];
-  const doctors = ['all', ...new Set(mockRecords.map(record => record.doctor))];
+  // Get unique diseases and doctors for filters - derived from real data
+  const diseases = ['all', ...new Set(records.map(record => record.disease).filter(Boolean))];
+  const doctors = ['all', ...new Set(records.map(record => record.doctor).filter(Boolean))];
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setRecords(mockRecords);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    const fetchRecords = async () => {
+      try {
+        const response = await getStudentMedicalRecords();
+        // Handle both { data: [...] } and direct array response
+        const data = response?.data || response || [];
+        // Map data to expected format
+        const mapped = (Array.isArray(data) ? data : []).map(record => ({
+          id: record.id || record._id,
+          age: record.patientAge || record.age,
+          gender: record.patientGender || record.gender,
+          disease: record.diagnosis || record.disease,
+          treatment: record.treatment,
+          doctor: record.doctorName || record.doctor,
+          specialization: record.specialization,
+          date: record.visitDate || record.date || record.createdAt,
+          status: record.status,
+          notes: record.summary || record.notes,
+          type: record.type
+        }));
+        setRecords(mapped);
+      } catch (error) {
+        console.error('Error fetching records:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRecords();
   }, []);
 
   const filteredRecords = records.filter(record => {
     const matchesSearch = 
-      record.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.treatment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.notes.toLowerCase().includes(searchQuery.toLowerCase());
+      record.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.disease?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.treatment?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.notes?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesDisease = diseaseFilter === 'all' || record.disease === diseaseFilter;
     const matchesDoctor = doctorFilter === 'all' || record.doctor === doctorFilter;
@@ -107,41 +60,26 @@ const PatientRecords = () => {
 
   const openRecordModal = (record) => {
     setSelectedRecord(record);
-    document.getElementById('recordModal').classList.remove('hidden');
+    setModalOpen(true);
   };
 
   const closeModal = () => {
-    document.getElementById('recordModal').classList.add('hidden');
-    setTimeout(() => setSelectedRecord(null), 300);
+    setModalOpen(false);
+    setSelectedRecord(null);
   };
 
   const exportToCSV = () => {
-    // Simple CSV export function
     const headers = ['Patient ID', 'Age', 'Gender', 'Disease', 'Treatment', 'Doctor', 'Date', 'Status'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredRecords.map(record => 
-        [
-          `"${record.id}"`,
-          record.age,
-          `"${record.gender}"`,
-          `"${record.disease}"`,
-          `"${record.treatment}"`,
-          `"${record.doctor}"`,
-          `"${record.date}"`,
-          `"${record.status}"`
-        ].join(',')
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `patient_records_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const csvData = filteredRecords.map(r => [
+      r.id, r.age, r.gender, r.disease, r.treatment?.replace(/,/g, ';'), r.doctor, r.date, r.status
+    ]);
+    const csv = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'patient_records.csv';
+    a.click();
   };
 
   if (loading) {
@@ -287,12 +225,11 @@ const PatientRecords = () => {
       </div>
 
       {/* Record Details Modal */}
-      <div
-        id="recordModal"
-        className="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={(e) => e.target.id === 'recordModal' && closeModal()}
-      >
-        {selectedRecord && (
+      {modalOpen && selectedRecord && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && closeModal()}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-start justify-between">
@@ -310,7 +247,6 @@ const PatientRecords = () => {
                   onClick={closeModal}
                   className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                 >
-                  <span className="sr-only">Close</span>
                   <X className="h-6 w-6" />
                 </button>
               </div>
@@ -336,60 +272,31 @@ const PatientRecords = () => {
                       <div className="text-sm text-gray-900 dark:text-white">{selectedRecord.doctor}</div>
                     </div>
                     <div className="flex">
-                      <div className="w-1/3 text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</div>
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        {new Date(selectedRecord.date).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </div>
+                      <div className="w-1/3 text-sm font-medium text-gray-500 dark:text-gray-400">Date</div>
+                      <div className="text-sm text-gray-900 dark:text-white">{selectedRecord.date}</div>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Treatment Plan</h3>
-                  <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prescribed Treatment</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{selectedRecord.treatment}</p>
-                  </div>
-                  <div className="mt-4 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Clinical Notes</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{selectedRecord.notes}</p>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">AI-Generated Summary</h3>
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedRecord.notes}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Attachments</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      No attachments available for this record.
-                    </p>
-                  </div>
-                  <div className="flex space-x-3">
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
-                      onClick={closeModal}
-                    >
-                      Close
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export as PDF
-                    </button>
-                  </div>
-                </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

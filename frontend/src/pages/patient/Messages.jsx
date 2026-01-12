@@ -1,12 +1,11 @@
 import { MessageSquare, Search, Send, Plus, Users } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { getConversations, getMessages, sendMessage } from '../../services/messageService'
-import { getDoctorPatients } from '../../services/patientService'
+import { getConversations, getMessages, sendMessage, getMyDoctors } from '../../services/messageService'
 import toast from 'react-hot-toast'
 
 export default function Messages() {
   const [conversations, setConversations] = useState([])
-  const [allPatients, setAllPatients] = useState([])
+  const [allDoctors, setAllDoctors] = useState([])
   const [selected, setSelected] = useState(null)
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
@@ -17,7 +16,7 @@ export default function Messages() {
 
   useEffect(() => {
     loadConversations()
-    loadPatients()
+    loadDoctors()
     const interval = setInterval(loadConversations, 3000)
     return () => clearInterval(interval)
   }, [])
@@ -41,20 +40,12 @@ export default function Messages() {
     }
   }
 
-  const loadPatients = async () => {
+  const loadDoctors = async () => {
     try {
-      const data = await getDoctorPatients()
-      // Map the data to include _id field from id
-      const mapped = (Array.isArray(data) ? data : []).map(p => ({
-        _id: p._id || p.id,
-        name: p.name,
-        email: p.email,
-        photoURL: p.photoURL,
-        role: 'patient'
-      }))
-      setAllPatients(mapped)
+      const data = await getMyDoctors()
+      setAllDoctors(data)
     } catch (err) {
-      console.error('Failed to load patients', err)
+      console.error('Failed to load doctors', err)
     }
   }
 
@@ -76,7 +67,7 @@ export default function Messages() {
       setMessages([...messages, newMessage])
       setText('')
       toast.success('Message sent')
-      loadConversations() // Refresh conversations list
+      loadConversations()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send message')
     } finally {
@@ -84,14 +75,15 @@ export default function Messages() {
     }
   }
 
-  const startNewChat = (patient) => {
+  const startNewChat = (doctor) => {
     setSelected({
       partner: {
-        _id: patient._id,
-        name: patient.name,
-        email: patient.email,
-        photoURL: patient.photoURL,
-        role: patient.role
+        _id: doctor._id,
+        name: doctor.name,
+        email: doctor.email,
+        photoURL: doctor.photoURL,
+        role: doctor.role,
+        specialization: doctor.specialization
       },
       lastMessage: '',
       unreadCount: 0
@@ -105,18 +97,15 @@ export default function Messages() {
     conv.partner?.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const filteredPatients = allPatients.filter((patient) =>
-    patient.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredDoctors = allDoctors.filter((doctor) =>
+    doctor.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doctor.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doctor.specialization?.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  // Get patients who don't have existing conversations
-  const existingPartnerIds = conversations.map(c => c.partner?._id?.toString())
-  const newPatients = filteredPatients.filter(p => !existingPartnerIds.includes(p._id?.toString()))
 
   return (
     <div className="grid gap-4 lg:grid-cols-[360px,1fr] min-h-[calc(100vh-4rem)] text-gray-900 dark:text-gray-100 w-full">
-      {/* Left Panel - Conversations & New Chat */}
+      {/* Left Panel */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
@@ -136,7 +125,7 @@ export default function Messages() {
           <div className="relative">
             <Search className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
             <input
-              placeholder={showNewChat ? "Search all patients..." : "Search conversations..."}
+              placeholder={showNewChat ? "Search doctors..." : "Search conversations..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500"
@@ -146,35 +135,34 @@ export default function Messages() {
 
         <div className="flex-1 overflow-y-auto">
           {showNewChat ? (
-            // Show all patients for starting new chat
             <>
               <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900">
-                All Patients ({filteredPatients.length})
+                All Doctors ({filteredDoctors.length})
               </div>
-              {filteredPatients.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">No patients found</div>
+              {filteredDoctors.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">No doctors found</div>
               ) : (
-                filteredPatients.map((patient) => (
+                filteredDoctors.map((doctor) => (
                   <button
-                    key={patient._id}
-                    onClick={() => startNewChat(patient)}
+                    key={doctor._id}
+                    onClick={() => startNewChat(doctor)}
                     className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
-                      selected?.partner?._id === patient._id ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
+                      selected?.partner?._id === doctor._id ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                        {patient.photoURL ? (
-                          <img src={patient.photoURL} alt={patient.name} className="w-10 h-10 rounded-full object-cover" />
+                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                        {doctor.photoURL ? (
+                          <img src={doctor.photoURL} alt={doctor.name} className="w-10 h-10 rounded-full object-cover" />
                         ) : (
-                          <span className="text-indigo-600 dark:text-indigo-300 font-medium">
-                            {patient.name?.charAt(0)?.toUpperCase() || '?'}
+                          <span className="text-green-600 dark:text-green-300 font-medium">
+                            {doctor.name?.charAt(0)?.toUpperCase() || '?'}
                           </span>
                         )}
                       </div>
                       <div>
-                        <p className="font-medium">{patient.name}</p>
-                        <p className="text-xs text-gray-500">{patient.email}</p>
+                        <p className="font-medium">Dr. {doctor.name}</p>
+                        <p className="text-xs text-gray-500">{doctor.specialization || doctor.email}</p>
                       </div>
                     </div>
                   </button>
@@ -182,7 +170,6 @@ export default function Messages() {
               )}
             </>
           ) : (
-            // Show existing conversations
             <>
               {loading ? (
                 <div className="p-4 text-center text-gray-500">Loading...</div>
@@ -193,7 +180,7 @@ export default function Messages() {
                     onClick={() => setShowNewChat(true)}
                     className="mt-2 text-indigo-600 dark:text-indigo-400 text-sm hover:underline"
                   >
-                    Start a new chat
+                    Message a doctor
                   </button>
                 </div>
               ) : (
@@ -207,17 +194,17 @@ export default function Messages() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
                           {conv.partner.photoURL ? (
                             <img src={conv.partner.photoURL} alt={conv.partner.name} className="w-10 h-10 rounded-full object-cover" />
                           ) : (
-                            <span className="text-indigo-600 dark:text-indigo-300 font-medium">
+                            <span className="text-green-600 dark:text-green-300 font-medium">
                               {conv.partner.name?.charAt(0)?.toUpperCase() || '?'}
                             </span>
                           )}
                         </div>
                         <div>
-                          <p className="font-medium">{conv.partner.name}</p>
+                          <p className="font-medium">{conv.partner.role === 'doctor' ? 'Dr. ' : ''}{conv.partner.name}</p>
                           <p className="text-xs text-gray-500">{conv.partner.email}</p>
                         </div>
                       </div>
@@ -238,23 +225,23 @@ export default function Messages() {
         </div>
       </div>
 
-      {/* Right Panel - Chat Area */}
+      {/* Right Panel - Chat */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col min-h-[420px]">
         {selected ? (
           <>
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
                 {selected.partner.photoURL ? (
                   <img src={selected.partner.photoURL} alt={selected.partner.name} className="w-10 h-10 rounded-full object-cover" />
                 ) : (
-                  <span className="text-indigo-600 dark:text-indigo-300 font-medium">
+                  <span className="text-green-600 dark:text-green-300 font-medium">
                     {selected.partner.name?.charAt(0)?.toUpperCase() || '?'}
                   </span>
                 )}
               </div>
               <div>
-                <p className="font-semibold">{selected.partner.name}</p>
-                <p className="text-sm text-gray-500">{selected.partner.email}</p>
+                <p className="font-semibold">{selected.partner.role === 'doctor' ? 'Dr. ' : ''}{selected.partner.name}</p>
+                <p className="text-sm text-gray-500">{selected.partner.specialization || selected.partner.email}</p>
               </div>
             </div>
             <div className="flex-1 p-4 space-y-3 overflow-y-auto bg-gray-50 dark:bg-gray-900">
@@ -313,13 +300,13 @@ export default function Messages() {
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <MessageSquare className="h-12 w-12 mb-3 text-gray-300 dark:text-gray-600" />
             <p className="text-lg font-medium">Select a conversation</p>
-            <p className="text-sm">or start a new chat with a patient</p>
+            <p className="text-sm">or message a doctor</p>
             <button
               onClick={() => setShowNewChat(true)}
               className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
             >
               <Plus className="h-4 w-4 inline mr-2" />
-              New Chat
+              Message Doctor
             </button>
           </div>
         )}

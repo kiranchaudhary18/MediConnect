@@ -254,3 +254,35 @@ export const getDoctorDashboardStats = async () => {
   const res = await axios.get('/patient/doctor-dashboard');
   return res.data;
 };
+
+/* ================= NOTIFICATIONS & HEALTH TIPS ================= */
+export const sendHealthTip = async (payload) => {
+  const res = await axios.post('/patient/notifications/health-tip', payload);
+  return res.data;
+};
+
+export const generateHealthTipAI = async (payload) => {
+  const res = await axios.post('/patient/notifications/health-tip/generate', payload);
+  return res.data;
+};
+
+export const getNotifications = async () => {
+  const res = await axios.get('/patient/notifications');
+  return res.data;
+};
+
+export const markNotificationRead = async (id) => {
+  const res = await axios.patch(`/patient/notifications/${id}/read`);
+  return res.data;
+};
+
+export const deleteNotification = async (id) => {
+  const res = await axios.delete(`/patient/notifications/${id}`);
+  return res.data;
+};
+
+/* ================= STUDENT: MEDICAL RECORDS ================= */
+export const getStudentMedicalRecords = async () => {
+  const res = await axios.get('/patient/student/medical-records');
+  return res.data;
+};

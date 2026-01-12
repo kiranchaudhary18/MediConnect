@@ -13,19 +13,20 @@ import {
   Moon,
   Sun,
   MessageSquare,
-  Activity
+  Activity,
+  Trash
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getNotifications, markNotificationRead, deleteNotification } from '../services/patientService';
 
 export default function DoctorLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Appointment', message: 'You have a new appointment request', time: '10 minutes ago', read: false },
-    { id: 2, title: 'Test Results', message: 'Lab results for John Doe are ready', time: '2 hours ago', read: true },
-  ]);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
@@ -33,6 +34,8 @@ export default function DoctorLayout() {
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  // Keep sidebar visible on all doctor pages, including messages
+  const isFullWidth = false;
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -50,6 +53,18 @@ export default function DoctorLayout() {
     };
   }, []);
 
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const data = await getNotifications();
+        setNotifications(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to load doctor notifications', err);
+      }
+    };
+    loadNotifications();
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -57,7 +72,7 @@ export default function DoctorLayout() {
 
   const markAsRead = (id) => {
     setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: true } : notif
+      notif._id === id || notif.id === id ? { ...notif, read: true } : notif
     ));
   };
 
@@ -80,7 +95,8 @@ export default function DoctorLayout() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile sidebar */}
-      <div className={`lg:hidden fixed inset-0 z-20 flex flex-col h-full bg-white dark:bg-gray-800 w-64 transform ${isCollapsed ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out`}>
+      {!isFullWidth && (
+        <div className={`lg:hidden fixed inset-0 z-20 flex flex-col h-full bg-white dark:bg-gray-800 w-64 transform ${isCollapsed ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
           <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-white">
             Mediconnect
@@ -129,9 +145,11 @@ export default function DoctorLayout() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:border-r lg:border-gray-200 lg:dark:border-gray-700 lg:bg-white lg:dark:bg-gray-800">
+      {!isFullWidth && (
+        <div className="hidden lg:flex lg:flex-col lg:w-64 lg:border-r lg:border-gray-200 lg:dark:border-gray-700 lg:bg-white lg:dark:bg-gray-800">
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
           <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-white">
             Mediconnect
@@ -172,7 +190,8 @@ export default function DoctorLayout() {
             Logout
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -233,26 +252,62 @@ export default function DoctorLayout() {
                       ) : (
                         notifications.map((notification) => (
                           <div
-                            key={notification.id}
+                            key={notification._id || notification.id}
                             className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
                               !notification.read ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                             }`}
-                            onClick={() => markAsRead(notification.id)}
+                            onClick={async () => {
+                              try {
+                                await markNotificationRead(notification._id || notification.id);
+                              } catch (err) {
+                                console.error('mark read failed', err);
+                              }
+                              setNotifications((prev) => prev.map((n) => (n._id === (notification._id || notification.id) || n.id === (notification._id || notification.id) ? { ...n, read: true } : n)));
+                              setSelectedNotification(notification);
+                              setNotificationModalOpen(true);
+                              setNotificationOpen(false);
+                            }}
                           >
-                            <div className="flex items-start">
-                              <div className="flex-shrink-0 pt-0.5">
-                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start">
+                                <div className="flex-shrink-0 pt-0.5">
+                                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                </div>
+                                <div className="ml-3">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                    {notification.message}
+                                  </p>
+                                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                                    {notification.time || new Date(notification.createdAt || Date.now()).toLocaleString()}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="ml-3">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {notification.title}
-                                </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {notification.message}
-                                </p>
-                                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                                  {notification.time}
-                                </p>
+                              <div className="ml-3 flex-shrink-0">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    (async () => {
+                                      try {
+                                          const res = await deleteNotification(notification._id || notification.id);
+                                          setNotifications((prev) => prev.filter((n) => (n._id || n.id) !== (notification._id || notification.id)));
+                                          // show toast via window (DoctorLayout doesn't import toast) - console for now
+                                          console.log(res?.message || 'Notification deleted');
+                                      } catch (err) {
+                                          console.error('Failed to delete notification', err);
+                                          const msg = err?.response?.data?.message || err.message || 'Failed to delete notification';
+                                          // Optionally use an in-app toast; for now log
+                                          console.error(msg);
+                                      }
+                                    })();
+                                  }}
+                                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600"
+                                  aria-label="Delete notification"
+                                >
+                                  <Trash className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -261,7 +316,7 @@ export default function DoctorLayout() {
                     </div>
                     <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
                       <Link
-                        to="/notifications"
+                        to="/doctor/notifications"
                         className="text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
                         onClick={() => setNotificationOpen(false)}
                       >
@@ -318,9 +373,36 @@ export default function DoctorLayout() {
           </div>
         </header>
 
+              {/* Notification detail modal */}
+              {notificationModalOpen && selectedNotification && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="fixed inset-0 bg-black/40" onClick={() => setNotificationModalOpen(false)} />
+                  <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-xl w-full mx-4 p-6 z-50">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedNotification.title}</h3>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{selectedNotification.time || new Date(selectedNotification.createdAt || Date.now()).toLocaleString()}</p>
+                      </div>
+                      <button onClick={() => setNotificationModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300">Close</button>
+                    </div>
+                    <div className="mt-4 text-sm text-gray-700 dark:text-gray-300">
+                      {selectedNotification.message}
+                    </div>
+                    <div className="mt-6 text-right">
+                      <button
+                        onClick={() => setNotificationModalOpen(false)}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto">
+          <div className={isFullWidth ? 'w-full mx-0' : 'max-w-7xl mx-auto'}>
             <Outlet />
           </div>
         </main>
