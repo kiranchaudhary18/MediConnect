@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Search, Filter, Plus } from 'lucide-react';
+import { Calendar, Clock, Search, Filter } from 'lucide-react';
+import { getDoctorAppointments, updateDoctorAppointmentStatus } from '../../services/patientService';
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([]);
@@ -7,32 +8,25 @@ export default function Appointments() {
   const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
-    // Simulate API call
     const fetchAppointments = async () => {
       try {
-        // In a real app: const response = await axios.get('/api/doctor/appointments');
-        setTimeout(() => {
-          const mockAppointments = [
-            {
-              id: 1,
-              patientName: 'John Doe',
-              date: '2023-11-01',
-              time: '09:30 AM',
-              type: 'Consultation',
-              status: 'confirmed',
-              notes: 'Follow-up visit'
-            },
-            // Add more mock data as needed
-          ];
-          setAppointments(mockAppointments);
-          setLoading(false);
-        }, 1000);
+        const data = await getDoctorAppointments();
+        const normalized = (Array.isArray(data) ? data : []).map((apt) => ({
+          id: apt._id,
+          patientName: apt.patient?.name || 'Unknown',
+          date: new Date(apt.date).toLocaleDateString(),
+          time: apt.time,
+          type: apt.reason ? 'Consultation' : 'Appointment',
+          status: apt.status || 'pending',
+          notes: apt.reason || ''
+        }));
+        setAppointments(normalized);
       } catch (error) {
         console.error('Error fetching appointments:', error);
+      } finally {
         setLoading(false);
       }
     };
-    
     fetchAppointments();
   }, []);
 
@@ -49,10 +43,7 @@ export default function Appointments() {
             Manage and schedule patient appointments
           </p>
         </div>
-        <button className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          <Plus className="h-4 w-4 mr-2" />
-          New Appointment
-        </button>
+        {/* New Appointment button removed as requested */}
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
@@ -143,22 +134,39 @@ export default function Appointments() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          appointment.status === 'confirmed' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          appointment.status === 'confirmed'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                             : appointment.status === 'pending'
                             ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            : appointment.status === 'completed'
+                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                         }`}>
-                          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                          {appointment.status.replace('_', ' ').replace(/^\w/, (c) => c.toUpperCase())}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3">
-                          View
-                        </button>
-                        <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                          Edit
-                        </button>
+                        <div className="inline-flex items-center gap-3">
+                          <label className="text-xs text-gray-600 dark:text-gray-300">Update:</label>
+                          <select
+                            className="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            value={appointment.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value;
+                              try {
+                                await updateDoctorAppointmentStatus(appointment.id, newStatus);
+                                setAppointments(prev => prev.map(a => a.id === appointment.id ? { ...a, status: newStatus } : a));
+                              } catch (err) {
+                                console.error('Failed to update status', err);
+                              }
+                            }}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="not_available">Not available</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </div>
                       </td>
                     </tr>
                   ))

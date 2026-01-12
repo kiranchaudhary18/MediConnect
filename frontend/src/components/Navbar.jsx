@@ -51,7 +51,27 @@ const Navbar = () => {
             <div className="hidden md:flex items-center space-x-2">
               {user ? (
                 <>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 hidden lg:inline">{user.name}</span>
+                <div className="flex items-center space-x-3">
+    {/* Profile Image */}
+    {user.profilePicture ? (
+      <img
+        src={user.profilePicture}
+        alt="Profile"
+        className="w-9 h-9 rounded-full object-cover border"
+        // key={user.profilePicture} // 🔥 FORCE RE-RENDER
+      />
+    ) : (
+      <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+        {user.name?.charAt(0).toUpperCase()}
+      </div>
+    )}
+
+  {/* User Name */}
+  <span className="text-sm text-gray-700 dark:text-gray-300 hidden lg:inline">
+    {user.name}
+  </span>
+</div>
+
                   <button
                     onClick={logout}
                     className="flex items-center space-x-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm"

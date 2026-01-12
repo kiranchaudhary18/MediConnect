@@ -54,65 +54,30 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const updateProfile = async (data) => {
-    try {
-      const formData = new FormData();
-      
-      console.log('Updating profile with data:', data);
-      
-      // Append all form fields to FormData
-      Object.keys(data).forEach(key => {
-        if (key === 'photoFile' && data.photoFile) {
-          formData.append('image', data.photoFile);
-          console.log('Appended image file:', data.photoFile.name);
-        } else if (data[key] !== undefined && data[key] !== null) {
-          // Map phone to contact for the backend
-          if (key === 'phone') {
-            formData.append('contact', data[key]);
-            console.log('Appended contact:', data[key]);
-          } else if (key !== 'photoFile') { // Skip photoFile as it's handled separately
-            formData.append(key, data[key]);
-            console.log(`Appended ${key}:`, data[key]);
-          }
-        }
-      });
+const updateProfile = async (data) => {
+  try {
+    const formData = new FormData();
 
-      // Get the token from storage
-      const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
-      const token = storage.getItem('token');
-
-      console.log('Sending update request to /auth/profile');
-      const response = await axios.put('/auth/profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        },
-      });
-
-      console.log('Update profile response:', response.data);
-
-      if (response.data && response.data.success) {
-        // Update the user in context
-        const updatedUser = {
-          ...response.data.user,
-          // Map contact back to phone for frontend
-          phone: response.data.user.contact || (user?.phone || '')
-        };
-        
-        setUser(updatedUser);
-        
-        // Update localStorage if needed
-        const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
-        storage.setItem('user', JSON.stringify(updatedUser));
-        
-        return { success: true, user: updatedUser };
+    Object.keys(data).forEach((key) => {
+      if (key === 'photoFile' && data.photoFile) {
+        formData.append('photo', data.photoFile);
+      } else {
+        formData.append(key, data[key]);
       }
-    } catch (error) {
-      console.error('Update profile error:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update profile';
-      throw new Error(errorMessage);
+    });
+
+    const response = await axios.put('/auth/profile', formData);
+
+    if (response.data.success) {
+      // 🔥 FORCE REFRESH USER FROM BACKEND
+      await loadUser();
+
+      return { success: true };
     }
-  };
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Profile update failed');
+  }
+};
 
   const login = async (email, password, rememberMe = false) => {
     try {

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FileText, Calendar, Stethoscope, Download, Search, Filter, AlertCircle } from 'lucide-react';
+import { getMedicalHistory } from '../../services/patientService';
+import { useMemo } from 'react';
+
 
 const MedicalHistory = () => {
   const [activeTab, setActiveTab] = useState('all');
@@ -9,70 +12,54 @@ const MedicalHistory = () => {
   const [filteredResults, setFilteredResults] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState(['all']);
 
-  // Mock data for medical records
-  const mockRecords = [
-    {
-      id: 1,
-      type: 'prescription',
-      title: 'Prescription - Dr. Sarah Johnson',
-      date: '2023-10-15',
-      doctor: 'Dr. Sarah Johnson',
-      specialty: 'Cardiologist',
-      description: 'Medication for blood pressure management',
-      file: 'prescription_10152023.pdf',
-    },
-    {
-      id: 2,
-      type: 'lab',
-      title: 'Blood Test Results',
-      date: '2023-10-10',
-      doctor: 'Dr. Michael Chen',
-      specialty: 'Pathology',
-      description: 'Complete blood count and lipid profile',
-      file: 'blood_test_10102023.pdf',
-    },
-    {
-      id: 3,
-      type: 'report',
-      title: 'X-Ray Report - Chest',
-      date: '2023-09-28',
-      doctor: 'Dr. Emily Wilson',
-      specialty: 'Radiology',
-      description: 'Chest X-ray for persistent cough evaluation',
-      file: 'xray_chest_09282023.pdf',
-    },
-    {
-      id: 4,
-      type: 'prescription',
-      title: 'Prescription - Dr. Robert Taylor',
-      date: '2023-09-15',
-      doctor: 'Dr. Robert Taylor',
-      specialty: 'General Physician',
-      description: 'Antibiotics for sinus infection',
-      file: 'prescription_09152023.pdf',
-    },
-    {
-      id: 5,
-      type: 'lab',
-      title: 'Urine Test Results',
-      date: '2023-09-10',
-      doctor: 'Dr. Lisa Wong',
-      specialty: 'Nephrology',
-      description: 'Routine urine analysis',
-      file: 'urine_test_09102023.pdf',
-    },
-  ];
+  const originBase = useMemo(() => {
+    const api = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return api.replace(/\/?api\/?$/, '');
+  }, []);
+
+  const fetchMedicalHistory = async () => {
+    try {
+      setLoading(true);
+      const data = await getMedicalHistory();
+      console.log('Fetched medical records:', data); // Debug log
+      const formatted = (data || []).map(record => {
+        // Normalize type from backend enum to frontend filter keys
+        let normalizedType = 'report';
+        if (record.type) {
+          const t = record.type.toLowerCase();
+          if (t === 'prescription') normalizedType = 'prescription';
+          else if (t === 'lab test') normalizedType = 'lab';
+          else if (t === 'report') normalizedType = 'report';
+        }
+        
+        return {
+          id: record._id,
+          type: normalizedType,
+          title: record.title || 'Untitled record',
+          date: record.date || new Date().toISOString(),
+          doctor: record.doctorName || 'Doctor',
+          specialty: record.specialty || '',
+          description: record.description || '',
+          file: record.fileUrl || '#'
+        };
+      });
+
+      console.log('Formatted records:', formatted); // Debug log
+      setMedicalRecords(formatted);
+      setFilteredResults(formatted);
+    } catch (error) {
+      console.error('Failed to fetch medical history', error);
+      setMedicalRecords([]);
+      setFilteredResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate API call to fetch medical records
-    const timer = setTimeout(() => {
-      setMedicalRecords(mockRecords);
-      setFilteredResults(mockRecords);
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchMedicalHistory();
   }, []);
+
 
   useEffect(() => {
     // Filter records based on search query and selected types
@@ -81,12 +68,12 @@ const MedicalHistory = () => {
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      results = results.filter(
-        record =>
-          record.title.toLowerCase().includes(query) ||
-          record.doctor.toLowerCase().includes(query) ||
-          record.description.toLowerCase().includes(query) ||
-          record.specialty.toLowerCase().includes(query)
+      const safe = (value) => (value || '').toString().toLowerCase();
+      results = results.filter(record =>
+        safe(record.title).includes(query) ||
+        safe(record.doctor).includes(query) ||
+        safe(record.description).includes(query) ||
+        safe(record.specialty).includes(query)
       );
     }
     
@@ -131,17 +118,12 @@ const MedicalHistory = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const handleDownload = (file) => {
-    // In a real app, this would trigger a file download
-    console.log(`Downloading ${file}`);
-    // Simulate download
-    const link = document.createElement('a');
-    link.href = `#`;
-    link.download = file;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+ const handleDownload = (fileUrl) => {
+  if (!fileUrl) return;
+  const url = fileUrl.startsWith('/uploads') ? `${originBase}${fileUrl}` : fileUrl;
+  window.open(url, '_blank');
+};
+
 
   const toggleTypeFilter = (type) => {
     if (type === 'all') {
@@ -162,22 +144,28 @@ const MedicalHistory = () => {
     <div className="p-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Medical History</h1>
-        <div className="mt-4 md:mt-0">
-          <div className="relative rounded-md shadow-sm">
+        <div className="mt-4 md:mt-0 flex items-center gap-2">
+          <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
             </div>
             <input
               type="text"
-              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-12 sm:text-sm border-0 rounded-md bg-transparent text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="Search records..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <Filter className="h-4 w-4 text-gray-400" />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+              <Filter className="h-4 w-4" />
             </div>
           </div>
+          <button
+            onClick={fetchMedicalHistory}
+            className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            Refresh
+          </button>
         </div>
       </div>
 

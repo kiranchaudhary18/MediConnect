@@ -210,7 +210,7 @@ const StudentLayout = () => {
                 {darkMode ? (
                   <Sun className="w-6 h-6 text-yellow-400" />
                 ) : (
-                  <Moon className="w-6 h-6 text-indigo-600" />
+                  <Moon className="w-6 h-6 text-white" />
                 )}
               </button>
               
@@ -220,7 +220,7 @@ const StudentLayout = () => {
                   className={`p-2 rounded-full relative ${
                     darkMode 
                       ? 'hover:bg-gray-700 text-white' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100 shadow-sm'
                   } transition-all duration-200 w-10 h-10 flex items-center justify-center`}
                   aria-label="Notifications"
                 >

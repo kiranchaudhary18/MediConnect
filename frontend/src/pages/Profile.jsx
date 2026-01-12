@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Camera, Save, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+  
 import toast from 'react-hot-toast';
 
 const Profile = () => {
@@ -16,6 +18,7 @@ const Profile = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [preview, setPreview] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -27,9 +30,10 @@ const Profile = () => {
         specialization: user.specialization || '',
         bio: user.bio || '',
       });
-      if (user.photoURL) {
-        setPreview(user.photoURL);
-      }
+     if (user.profilePicture) {
+  setPreview(user.profilePicture);
+}
+
     }
   }, [user]);
 
@@ -70,45 +74,45 @@ const Profile = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      console.log('Submitting form with data:', formData);
-      console.log('Profile image:', profileImage);
-      
-      const updateData = { ...formData };
-      
-      // Only include the image if it's a new one
-      if (profileImage) {
-        updateData.photoFile = profileImage;
-      }
-      
-      console.log('Sending update data:', updateData);
-      
-      const result = await updateProfile(updateData);
-      
-      if (result.success) {
-        toast.success('Profile updated successfully!');
-        
-        // Update the form data with the returned user data
-        if (result.user) {
-          setFormData(prev => ({
-            ...prev,
-            ...result.user,
-            // Handle phone/contact mapping
-            phone: result.user.phone || prev.phone
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error(error.message || 'Failed to update profile');
-    } finally {
-      setIsLoading(false);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
+
+  try {
+    const payload = {
+      name: formData.name,
+      phone: formData.phone,
+      address: formData.address,
+      bio: formData.bio,
+    };
+
+    if (user?.role === 'doctor') {
+      payload.specialization = formData.specialization;
     }
-  };
+
+    if (profileImage) {
+      payload.photoFile = profileImage;
+    }
+
+    const result = await updateProfile(payload);
+
+    if (result.success) {
+      toast.success('Profile updated successfully!');
+
+      // ✅ REDIRECT AFTER SUCCESS
+      setTimeout(() => {
+        navigate(`/${user.role}/dashboard`);
+      }, 800); // small delay for toast
+    }
+
+  } catch (error) {
+    toast.error(error.message || 'Profile update failed');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
   return (
     <div className="max-w-4xl mx-auto p-6">

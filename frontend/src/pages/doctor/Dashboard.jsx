@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Calendar, Stethoscope, Clock } from 'lucide-react';
-import axios from 'axios';
+import { getDoctorDashboardStats, getDoctorPatients, getDoctorAppointments } from '../../services/patientService';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -15,49 +16,60 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+    let intervalId;
     const fetchDashboardData = async () => {
       try {
-        // In a real app, you would make API calls here
-        // const dashboardData = await axios.get('/api/doctor/dashboard');
-        // const patientsData = await axios.get('/api/doctor/patients?limit=5');
-        // const appointmentsData = await axios.get('/api/doctor/appointments?status=upcoming&limit=5');
-        
-        // Mock data for demonstration
-        setTimeout(() => {
-          setStats({
-            totalPatients: 124,
-            totalStudents: 89,
-            totalAppointments: 45,
-            pendingAppointments: 12
-          });
-          
-          setRecentPatients([
-            { id: 1, name: 'John Doe', age: 32, disease: 'Hypertension', lastVisit: '2023-10-25' },
-            { id: 2, name: 'Jane Smith', age: 28, disease: 'Diabetes', lastVisit: '2023-10-24' },
-            { id: 3, name: 'Robert Johnson', age: 45, disease: 'Asthma', lastVisit: '2023-10-23' },
-            { id: 4, name: 'Emily Davis', age: 29, disease: 'Migraine', lastVisit: '2023-10-22' },
-            { id: 5, name: 'Michael Brown', age: 52, disease: 'Arthritis', lastVisit: '2023-10-21' },
-          ]);
-          
-          setUpcomingAppointments([
-            { id: 1, patientName: 'John Doe', date: '2023-10-30', time: '09:30 AM', status: 'confirmed' },
-            { id: 2, patientName: 'Sarah Wilson', date: '2023-10-30', time: '10:15 AM', status: 'confirmed' },
-            { id: 3, patientName: 'David Lee', date: '2023-10-30', time: '11:00 AM', status: 'pending' },
-            { id: 4, patientName: 'Emma Garcia', date: '2023-10-31', time: '02:00 PM', status: 'confirmed' },
-            { id: 5, patientName: 'James Taylor', date: '2023-10-31', time: '03:30 PM', status: 'pending' },
-          ]);
-          
-          setLoading(false);
-        }, 1000);
-        
+        const [statsRes, patientsRes, aptsRes] = await Promise.all([
+          getDoctorDashboardStats(),
+          getDoctorPatients(),
+          getDoctorAppointments()
+        ]);
+
+        if (!isMounted) return;
+        setStats({
+          totalPatients: statsRes?.totalPatients || 0,
+          totalStudents: statsRes?.totalStudents || 0,
+          totalAppointments: statsRes?.totalAppointments || 0,
+          pendingAppointments: statsRes?.pendingAppointments || 0
+        });
+
+        const rp = (Array.isArray(patientsRes) ? patientsRes : []).slice(0, 5).map(p => ({
+          id: p.id || p._id,
+          name: p.name,
+          age: p.age ?? '-',
+          disease: '—',
+          lastVisit: p.lastVisit ? new Date(p.lastVisit).toLocaleDateString() : '-'
+        }));
+        setRecentPatients(rp);
+
+        const now = new Date();
+        const ua = (Array.isArray(aptsRes) ? aptsRes : [])
+          .filter(a => ['pending', 'confirmed'].includes(a.status))
+          .filter(a => a.date && new Date(a.date) >= now)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .slice(0, 5)
+          .map(a => ({
+            id: a._id,
+            patientName: a.patient?.name || 'Unknown',
+            date: new Date(a.date).toLocaleDateString(),
+            time: a.time,
+            status: a.status
+          }));
+        setUpcomingAppointments(ua);
+
       } catch (err) {
-        setError('Failed to fetch dashboard data');
-        setLoading(false);
+        if (isMounted) setError('Failed to fetch dashboard data');
         console.error('Error fetching dashboard data:', err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
-    
+
     fetchDashboardData();
+    // Light polling for near real-time updates
+    intervalId = setInterval(fetchDashboardData, 15000);
+    return () => { isMounted = false; clearInterval(intervalId); };
   }, []);
 
   const StatCard = ({ title, value, icon: Icon, color }) => (
@@ -94,9 +106,7 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Welcome back, Dr. Smith! Here's what's happening with your practice today.
-        </p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Overview of your patients and appointments</p>
       </div>
       
       {/* Stats Grid */}
@@ -149,9 +159,9 @@ const Dashboard = () => {
             ))}
           </div>
           <div className="p-4 bg-gray-50 dark:bg-gray-700 text-center">
-            <a href="/doctor/patients" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <Link to="/doctor/patients" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               View all patients
-            </a>
+            </Link>
           </div>
         </div>
         
@@ -182,9 +192,9 @@ const Dashboard = () => {
             ))}
           </div>
           <div className="p-4 bg-gray-50 dark:bg-gray-700 text-center">
-            <a href="/doctor/appointments" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <Link to="/doctor/appointments" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               View all appointments
-            </a>
+            </Link>
           </div>
         </div>
       </div>

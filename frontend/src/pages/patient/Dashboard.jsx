@@ -374,6 +374,10 @@
 import { useState, useEffect } from 'react';
 import { Calendar, HeartPulse, Activity, Droplets, Scale, FileText } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getPatientDashboard } from '../../services/patientService';
+import { useAuth } from '../../context/AuthContext';
+
+
 
 const healthData = [
   { name: 'Mon', bp: 120, sugar: 90, weight: 70 },
@@ -386,8 +390,13 @@ const healthData = [
 ];
 
 export default function PatientDashboard() {
+
+  
+  const { user } = useAuth();   
   const [loading, setLoading] = useState(true);
   const [nextAppointment, setNextAppointment] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
+
   const [healthMetrics, setHealthMetrics] = useState({
     bloodPressure: '120/80',
     sugarLevel: '92 mg/dL',
@@ -396,30 +405,36 @@ export default function PatientDashboard() {
   });
 
   useEffect(() => {
-    // Simulate API call
-    const fetchData = async () => {
-      try {
-        // In a real app: const response = await axios.get('/api/patient/dashboard');
-        setTimeout(() => {
-          setNextAppointment({
-            id: 1,
-            doctorName: 'Dr. Sarah Johnson',
-            specialization: 'Cardiologist',
-            date: '2023-11-05',
-            time: '10:30 AM',
-            status: 'Confirmed'
-          });
-          
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        setLoading(false);
+  const fetchDashboard = async () => {
+    try {
+      const data = await getPatientDashboard();
+
+      // ✅ Next Appointment
+      setNextAppointment(data.nextAppointment || null);
+
+      // ✅ Health Summary
+      if (data.healthSummary) {
+        setHealthMetrics({
+          bloodPressure: data.healthSummary.bloodPressure,
+          sugarLevel: data.healthSummary.sugar || data.healthSummary.sugarLevel,
+          weight: data.healthSummary.weight,
+          bmi: data.healthSummary.bmi
+        });
       }
-    };
-    
-    fetchData();
-  }, []);
+
+      // ✅ Recent Activities
+      setRecentActivities(data.recentActivities || []);
+
+    } catch (error) {
+      console.error('Dashboard fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDashboard();
+}, []);
+
 
   const StatCard = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
@@ -446,10 +461,16 @@ export default function PatientDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Card */}
-      <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg text-white p-6">
-        <h1 className="text-2xl font-bold">Welcome back, John! 👋</h1>
-        <p className="mt-2 text-green-100">Here's what's happening with your health today.</p>
-      </div>
+      {/* Welcome Card */}
+<div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg text-white p-6">
+  <h1 className="text-2xl font-bold">
+    Welcome back, {user?.name || 'Patient'}! 👋
+  </h1>
+  <p className="mt-2 text-green-100">
+    Here's what's happening with your health today.
+  </p>
+</div>
+
       
       {/* Next Appointment */}
       {nextAppointment && (
@@ -569,32 +590,56 @@ export default function PatientDashboard() {
       
       {/* Recent Activities */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-        <div className="p-6">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Recent Activities</h2>
-          <div className="space-y-4">
-            {[
-              { id: 1, type: 'appointment', title: 'Appointment Confirmed', description: 'Your appointment with Dr. Sarah Johnson is confirmed for Nov 5, 10:30 AM', time: '2 hours ago' },
-              { id: 2, type: 'prescription', title: 'New Prescription', description: 'Dr. Johnson has updated your prescription', time: '1 day ago' },
-              { id: 3, type: 'test', title: 'Test Results', description: 'Your recent blood test results are available', time: '3 days ago' },
-            ].map((activity) => (
-              <div key={activity.id} className="flex items-start pb-4 border-b border-gray-200 dark:border-gray-700 last:border-0 last:pb-0">
-                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                  {activity.type === 'appointment' && <Calendar className="h-5 w-5 text-green-600 dark:text-green-300" />}
-                  {activity.type === 'prescription' && <FileText className="h-5 w-5 text-green-600 dark:text-green-300" />}
-                  {activity.type === 'test' && <Activity className="h-5 w-5 text-green-600 dark:text-green-300" />}
-                </div>
-                <div className="ml-4 flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">{activity.title}</h3>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{activity.time}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{activity.description}</p>
-                </div>
+        
+  <div className="p-6">
+    <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+      Recent Activities
+    </h2>
+
+    <div className="space-y-4">
+      {recentActivities.length > 0 ? (
+        recentActivities.map((activity, index) => (
+          <div
+            key={index}
+            className="flex items-start pb-4 border-b border-gray-200 dark:border-gray-700 last:border-0 last:pb-0"
+          >
+            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+              {activity.type === 'appointment' && (
+                <Calendar className="h-5 w-5 text-green-600 dark:text-green-300" />
+              )}
+              {activity.type === 'medical' && (
+                <FileText className="h-5 w-5 text-green-600 dark:text-green-300" />
+              )}
+              {activity.type === 'system' && (
+                <Activity className="h-5 w-5 text-green-600 dark:text-green-300" />
+              )}
+            </div>
+
+            <div className="ml-4 flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                  {activity.title}
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {activity.time}
+                </span>
               </div>
-            ))}
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {activity.description}
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
+        ))
+      ) : (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No recent activities found.
+        </p>
+      )}
+    </div>
+  </div>
+</div>
+
+              
     </div>
   );
 }

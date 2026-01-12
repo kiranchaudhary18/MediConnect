@@ -195,17 +195,18 @@ export default function DoctorLayout() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-label="Toggle dark mode"
               >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {darkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-gray-700" />}
               </button>
               
               {/* Notifications */}
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setNotificationOpen(!notificationOpen)}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                  className="p-2 rounded-full text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                  aria-label="Notifications"
                 >
                   <Bell className="w-5 h-5" />
                   {notifications.some(n => !n.read) && (
