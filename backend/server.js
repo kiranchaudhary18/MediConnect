@@ -296,6 +296,7 @@ import path from 'path';
 
 import authRoutes from './routes/auth.js';
 import patientRoutes from './routes/patient.js';
+import messagesRoutes from './routes/messages.js';
 
 dotenv.config();
 
@@ -322,6 +323,7 @@ app.use(
 /* -------------------- Routes -------------------- */
 app.use('/api/auth', authRoutes);
 app.use('/api/patient', patientRoutes);
+app.use('/api/messages', messagesRoutes);
 
 /* -------------------- Health Check -------------------- */
 app.get('/health', (req, res) => {

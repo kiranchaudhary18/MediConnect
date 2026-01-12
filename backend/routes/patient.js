@@ -30,7 +30,16 @@ import express from 'express';
 import { protect, authorize } from '../middleware/auth.js';
 
 import { upload } from '../middleware/upload.js';
-import { addMedicalHistory, getDoctorMedicalRecords, updateMedicalRecord } from '../controllers/patientController.js';
+import {
+  addMedicalHistory,
+  getDoctorMedicalRecords,
+  updateMedicalRecord,
+  sendHealthTip,
+  getNotifications,
+  markNotificationRead,
+  deleteNotification,
+  generateHealthTipAI
+} from '../controllers/patientController.js';
 
 
 import {
@@ -83,5 +92,31 @@ router.patch(
   updateMedicalRecord
 );
 
+// Doctor: send health tip / notification
+router.post(
+  '/notifications/health-tip',
+  authorize('doctor'),
+  sendHealthTip
+);
+
+// Doctor: generate health tip via Grok
+router.post(
+  '/notifications/health-tip/generate',
+  authorize('doctor'),
+  generateHealthTipAI
+);
+
+// User: get notifications
+router.get('/notifications', getNotifications);
+
+// User: mark notification read
+router.patch('/notifications/:id/read', markNotificationRead);
+
+// User: delete notification
+router.delete('/notifications/:id', deleteNotification);
+
+// Student: get anonymized medical records for learning
+import { getStudentMedicalRecords } from '../controllers/patientController.js';
+router.get('/student/medical-records', authorize('student'), getStudentMedicalRecords);
 
 export default router;

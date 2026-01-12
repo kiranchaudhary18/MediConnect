@@ -63,6 +63,12 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'confirmed', 'completed', 'cancelled', 'not_available'],
       default: 'pending'
+    },
+
+    // AI-generated summary when appointment is completed
+    summary: {
+      type: String,
+      default: ''
     }
   },
   { timestamps: true }
