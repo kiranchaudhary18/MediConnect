@@ -1,46 +1,27 @@
 import mongoose from 'mongoose';
 
-const medicalRecordSchema = new mongoose.Schema({
-  patientId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const medicalRecordSchema = new mongoose.Schema(
+  {
+    patient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    doctor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    title: String,
+    description: String,
+    type: {
+      type: String,
+      enum: ['Prescription', 'Lab Test', 'Report']
+    },
+    doctorName: String,
+    date: Date,
+    fileUrl: String
   },
-  title: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  type: {
-    type: String,
-    required: true,
-    enum: ['prescription', 'lab_test', 'report', 'other']
-  },
-  doctor: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  date: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
-  description: {
-    type: String,
-    trim: true
-  },
-  fileUrl: {
-    type: String,
-    trim: true
-  },
-  category: {
-    type: String,
-    required: true,
-    enum: ['Prescription', 'Lab Test', 'Report']
-  }
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
 export default mongoose.model('MedicalRecord', medicalRecordSchema);

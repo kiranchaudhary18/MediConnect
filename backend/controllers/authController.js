@@ -214,93 +214,48 @@ import { unlink } from 'fs/promises';
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name, phone, address, bio, specialization } = req.body;
+    const { name, contact, address, bio, specialization } = req.body;
+
     const updateData = {};
 
-    console.log('Request body:', req.body);
-    console.log('Uploaded file:', req.file);
-
-    // Add fields to update if they exist in the request
     if (name) updateData.name = name;
-    if (phone !== undefined) updateData.contact = phone; // Map phone to contact
-    if (address !== undefined) updateData.address = address;
-    if (bio !== undefined) updateData.bio = bio;
-    if (specialization !== undefined) updateData.specialization = specialization;
+    if (contact) updateData.contact = contact;
+    if (address) updateData.address = address;
+    if (bio) updateData.bio = bio;
+    if (specialization) updateData.specialization = specialization;
 
-    // Handle file upload if exists
+    // ✅ IMAGE UPLOAD
     if (req.file) {
-      try {
-        console.log('Uploading file to Cloudinary...');
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: 'mediconnect/profiles',
-          resource_type: 'auto',
-          transformation: [
-            { width: 300, height: 300, gravity: 'face', crop: 'thumb' },
-            { quality: 'auto:best' }
-          ]
-        });
-        
-        console.log('Cloudinary upload result:', result);
-        updateData.profilePicture = result.secure_url;
-        updateData.cloudinaryId = result.public_id;
-        
-        // Delete the temporary file
-        await unlink(req.file.path);
-        console.log('Temporary file deleted');
-      } catch (uploadError) {
-        console.error('Error uploading to Cloudinary:', uploadError);
-        // If there's an error with Cloudinary, still try to save the local path
-        const fileUrl = `/uploads/profiles/${req.file.filename}`;
-        updateData.profilePicture = fileUrl;
-        console.log('Falling back to local storage:', fileUrl);
-      }
+     updateData.profilePicture = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
     }
 
-    console.log('Updating user with data:', updateData);
-    
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { $set: updateData },
-      { new: true, runValidators: true }
+      { new: true }
     ).select('-password');
 
     if (!updatedUser) {
-      console.error('User not found with ID:', req.user._id);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
 
-    console.log('Successfully updated user:', updatedUser);
-    
-    res.status(200).json({
+    res.json({
       success: true,
-      message: 'Profile updated successfully',
       user: {
         ...updatedUser.toObject(),
-        // Map contact back to phone for frontend
         phone: updatedUser.contact || ''
       }
     });
+
   } catch (error) {
-    console.error('Update profile error:', error);
-    
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: messages
-      });
-    }
-    
+    console.error('UPDATE PROFILE ERROR:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating profile',
-      error: error.message
+      message: error.message
     });
   }
 };
