@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Bot, User as UserIcon, Sparkles } from 'lucide-react';
+import axios from '../utils/axios';
 
 const AISymptomChecker = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +11,7 @@ const AISymptomChecker = () => {
     }
   ]);
   const [input, setInput] = useState('');
+  const [grokKey, setGrokKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -32,27 +34,13 @@ const AISymptomChecker = () => {
     setIsLoading(true);
 
     try {
-      // In a real implementation, you would call your backend API here
-      // For demo purposes, we'll simulate a response
-      setTimeout(() => {
-        const responses = [
-          "I understand you're feeling unwell. Based on your symptoms, it could be a common cold. Make sure to rest and stay hydrated.",
-          "Your symptoms might indicate a mild headache. Try to rest in a quiet, dark room and drink plenty of water.",
-          "Those symptoms could be related to seasonal allergies. Consider taking an antihistamine if you don't have any contraindications.",
-          "It sounds like you might be experiencing fatigue. Make sure you're getting enough sleep and staying hydrated.",
-          "These symptoms could be stress-related. Try some relaxation techniques like deep breathing or meditation."
-        ];
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        
-        setMessages(prev => [
-          ...prev, 
-          { 
-            role: 'assistant', 
-            content: randomResponse + "\n\n*Please note: This is not a substitute for professional medical advice. If your symptoms persist or worsen, please consult a healthcare professional.*" 
-          }
-        ]);
-        setIsLoading(false);
-      }, 1000);
+      const res = await axios.post('/patient/symptom-check', { symptoms: input, grokKey: grokKey || undefined });
+      const content = res?.data?.content || res?.data?.message || 'Sorry, I could not generate a response.';
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content }
+      ]);
+      setIsLoading(false);
 
     } catch (error) {
       console.error('Error:', error);
@@ -153,6 +141,16 @@ const AISymptomChecker = () => {
               >
                 <Send className="w-5 h-5" />
               </button>
+            </div>
+            <div className="mt-2">
+              <input
+                type="text"
+                value={grokKey}
+                onChange={(e) => setGrokKey(e.target.value)}
+                placeholder="Optional Grok API key (local testing only)"
+                className="w-full px-3 py-1 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">Provide a Grok API key for direct Grok responses (do not share publicly).</p>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
               Note: This is an AI assistant and not a substitute for professional medical advice.

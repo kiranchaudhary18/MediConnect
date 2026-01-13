@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useContext } from 'react';
-import axios from 'axios';
+import axios from '../utils/axios';
 import { toast } from 'react-toastify';
 import Navbar from '../components/Navbar';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
@@ -43,31 +43,24 @@ const SymptomChecker = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        'http://localhost:5000/api/ai/analyze-symptoms',
-        {
-          symptoms: [input],
-          age: 30, // Can be dynamic based on user profile
-          gender: 'unknown', // Can be dynamic based on user profile
-          medicalHistory: '', // Can be added from user profile
-          language: userMessage.language
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          }
-        }
-      );
+      const response = await axios.post('/patient/symptom-check', {
+        symptoms: input,
+        age: 30,
+        gender: 'unknown',
+        medicalHistory: '',
+        language: userMessage.language
+      });
 
       // Add AI response to messages
+      const content = response?.data?.content || response?.data?.analysis || (userMessage.language === 'hi'
+        ? 'मैं आपके लक्षणों का विश्लेषण नहीं कर पाया। कृपया पुनः प्रयास करें।'
+        : 'I couldn\'t analyze the symptoms. Please try again.');
+
       setMessages(prev => [
-        ...prev, 
+        ...prev,
         {
           role: 'assistant',
-          content: response.data.analysis || (userMessage.language === 'hi' 
-            ? 'मैं आपके लक्षणों का विश्लेषण नहीं कर पाया। कृपया पुनः प्रयास करें।' 
-            : 'I couldn\'t analyze the symptoms. Please try again.')
+          content
         }
       ]);
     } catch (error) {

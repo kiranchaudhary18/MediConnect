@@ -161,7 +161,9 @@ export const getPatientAppointments = async () => {
 
 export const getAvailableDoctors = async () => {
   const res = await axios.get('/patient/doctors');
-  return res.data;
+  // Backend returns { success: true, data: doctors }
+  // Normalize to return the doctors array directly for the frontend
+  return (res && res.data && res.data.data) ? res.data.data : res.data;
 };
 
 export const getDoctorAppointments = async () => {
