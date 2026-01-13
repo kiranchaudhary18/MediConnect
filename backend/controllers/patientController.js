@@ -857,6 +857,85 @@ Return a brief title and 3 bullet points of practical advice (no diagnostics, no
   }
 };
 
+/* ---------------- PUBLIC: SYMPTOM CHECK VIA GROK ---------------- */
+export const generateSymptomAI = async (req, res) => {
+  try {
+    const { symptoms } = req.body;
+
+    if (!symptoms || !symptoms.trim()) {
+      return res.status(400).json({ message: 'Symptoms are required' });
+    }
+
+    const generateFallback = (text) => {
+      const t = text.toLowerCase();
+      if (t.includes('fever')) return 'It may be a fever — rest, hydrate, and monitor temperature. Seek care if fever > 103°F or lasts > 3 days.';
+      if (t.includes('cough')) return 'Cough could be viral or allergic. Stay hydrated, use steam inhalation, and see a doctor if breathing difficulties occur.';
+      if (t.includes('headache')) return 'Headache may be tension or migraine related — rest in a quiet dark room, hydrate, and consider OTC pain relief if appropriate.';
+      if (t.includes('stomach') || t.includes('abdominal')) return 'Stomach discomfort — try a bland diet and rest; seek care for severe pain or persistent vomiting.';
+      return 'Based on your symptoms, consider rest, hydration, and monitoring. This tool does not replace professional medical advice — consult a clinician if symptoms worsen.';
+    };
+
+    console.log('Symptom-check request received:', { symptoms });
+
+    // Allow an optional Grok API key supplied in the request body for local/testing use.
+    // If provided, it will be used for this single request only and not stored server-side.
+    const grokKey = (req.body && req.body.grokKey) ? String(req.body.grokKey).trim() : process.env.GROK_API_KEY;
+
+    if (!grokKey || grokKey === 'your_grok_api_key_here') {
+      return res.json({ success: true, content: generateFallback(symptoms) });
+    }
+
+    const prompt = `You are a careful medical triage assistant. A user reports: "${symptoms}". Provide a short, clear, non-diagnostic response that:
+1) Suggests likely non-emergency causes in plain language
+2) Gives 3 practical self-care steps (no prescriptions)
+3) Lists emergency warning signs that require immediate medical attention
+Keep it concise and end with a safety disclaimer.`;
+
+    const payload = {
+      model: 'grok-2-latest',
+      messages: [
+        { role: 'system', content: 'You are a responsible medical triage assistant. Never give prescriptions. Prioritize safety.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 300,
+      temperature: 0.6
+    };
+
+    try {
+      const response = await axios.post(
+        'https://api.x.ai/v1/chat/completions',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${grokKey}`
+          },
+          timeout: 20000
+        }
+      );
+
+      const content = response.data?.choices?.[0]?.message?.content;
+      if (!content) return res.json({ success: true, content: generateFallback(symptoms) });
+
+      return res.json({ success: true, content });
+    } catch (apiErr) {
+      console.error('Grok symptom-check error:', apiErr.response?.data || apiErr.message);
+      return res.json({ success: true, content: generateFallback(symptoms) });
+    }
+  } catch (err) {
+    console.error('generateSymptomAI error:', err);
+    // Return a safe fallback response instead of HTTP 500 so frontend can display a helpful message
+    try {
+      const body = req.body || {};
+      const symptoms = body.symptoms || body || '';
+      return res.json({ success: true, content: (typeof symptoms === 'string') ? generateFallback(symptoms) : generateFallback(String(symptoms)) });
+    } catch (fallbackErr) {
+      console.error('Fallback error in generateSymptomAI:', fallbackErr);
+      return res.json({ success: true, content: 'Unable to analyze symptoms at the moment. Please try again later.' });
+    }
+  }
+};
+
 /* ---------------- STUDENT: GET ANONYMIZED MEDICAL RECORDS ---------------- */
 export const getStudentMedicalRecords = async (req, res) => {
   try {

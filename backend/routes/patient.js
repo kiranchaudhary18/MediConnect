@@ -38,7 +38,8 @@ import {
   getNotifications,
   markNotificationRead,
   deleteNotification,
-  generateHealthTipAI
+  generateHealthTipAI,
+  generateSymptomAI
 } from '../controllers/patientController.js';
 
 
@@ -57,6 +58,9 @@ import {
 } from '../controllers/patientController.js';
 
 const router = express.Router();
+
+// Public: AI Symptom Checker (uses server-side Grok API key)
+router.post('/symptom-check', generateSymptomAI);
 
 router.use(protect);
 

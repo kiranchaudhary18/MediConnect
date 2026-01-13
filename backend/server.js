@@ -303,13 +303,39 @@ dotenv.config();
 const app = express();
 
 /* -------------------- Middleware -------------------- */
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173'
-  ],
-  credentials: true
-}));
+// Custom CORS & Private Network Access handling
+const allowedOrigins = new Set([
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'https://mediconnect-in.onrender.com',
+  'https://mediconnect-frontend.onrender.com'
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && (allowedOrigins.has(origin) || origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
+
+    // Browser Private Network Access: if the preflight asks to access a private network,
+    // respond with this header to allow it for supported browsers (Chrome, Edge, etc.).
+    if (req.headers['access-control-request-private-network']) {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+
+    // For OPTIONS preflight, return immediately with no body
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+  }
+
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
