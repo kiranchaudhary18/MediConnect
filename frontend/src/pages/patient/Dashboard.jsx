@@ -1,459 +1,105 @@
-// import { useState, useEffect } from 'react';
-// import { Calendar, Clock, Bell, Search, Menu, X, Home, User, Stethoscope, FileText, Settings, LogOut } from 'lucide-react';
-// import { getPatientDashboard } from '../../services/patientService';
-
-// export default function PatientDashboard() {
-//   const [sidebarOpen, setSidebarOpen] = useState(false);
-//   const [appointments, setAppointments] = useState([]);
-//   const [prescriptions, setPrescriptions] = useState([]);
-//   const [doctors, setDoctors] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         setLoading(true);
-//         // Mock data for now - replace with actual API call
-//         const data = await getPatientDashboard();
-//         setAppointments(data.appointments || [
-//           { _id: '1', doctorId: { name: 'John Doe' }, date: '2023-06-15', time: '10:00 AM', status: 'upcoming', reason: 'Regular checkup' },
-//           { _id: '2', doctorId: { name: 'Jane Smith' }, date: '2023-06-10', time: '2:30 PM', status: 'completed', reason: 'Follow up' },
-//         ]);
-//         setPrescriptions(data.prescriptions || [
-//           { _id: '1', doctorId: { name: 'John Doe' }, diagnosis: 'Common cold', createdAt: '2023-06-01' },
-//           { _id: '2', doctorId: { name: 'Jane Smith' }, diagnosis: 'Allergy medication', createdAt: '2023-05-25' },
-//         ]);
-//         setDoctors(data.doctors || [
-//           { _id: '1', name: 'John Doe', specialization: 'Cardiologist', experience: '10 years' },
-//           { _id: '2', name: 'Jane Smith', specialization: 'Dermatologist', experience: '8 years' },
-//           { _id: '3', name: 'Robert Johnson', specialization: 'Neurologist', experience: '12 years' },
-//         ]);
-//         setError(null);
-//       } catch (err) {
-//         console.error('Error fetching dashboard data:', err);
-//         setError('Failed to load dashboard data. Please try again later.');
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchData();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <div className="flex items-center justify-center h-screen bg-gray-100">
-//         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="flex items-center justify-center h-screen bg-gray-100">
-//         <div className="text-center p-6 bg-white rounded-lg shadow-md">
-//           <p className="text-red-500 text-4xl mb-4">⚠️</p>
-//           <p className="text-lg font-medium text-gray-800">Something went wrong</p>
-//           <p className="text-gray-600 mt-2">{error}</p>
-//           <button 
-//             onClick={() => window.location.reload()}
-//             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-//           >
-//             Retry
-//           </button>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="flex h-screen bg-gray-100">
-//       {/* Mobile sidebar backdrop */}
-//       {sidebarOpen && (
-//         <div 
-//           className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
-//           onClick={() => setSidebarOpen(false)}
-//         ></div>
-//       )}
-
-//       {/* Sidebar */}
-//       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
-//         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-//           <div className="flex items-center">
-//             <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold">M</div>
-//             <span className="ml-2 text-lg font-semibold text-gray-800">MediConnect</span>
-//           </div>
-//           <button 
-//             className="lg:hidden text-gray-500 hover:text-gray-700"
-//             onClick={() => setSidebarOpen(false)}
-//           >
-//             <X size={20} />
-//           </button>
-//         </div>
-//         <nav className="mt-6 px-2">
-//           <a href="#" className="flex items-center px-4 py-3 text-white bg-blue-600 rounded-lg">
-//             <Home size={20} className="mr-3" />
-//             <span>Dashboard</span>
-//           </a>
-//           <a href="#" className="flex items-center px-4 py-3 mt-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-//             <User size={20} className="mr-3" />
-//             <span>My Profile</span>
-//           </a>
-//           <a href="#" className="flex items-center px-4 py-3 mt-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-//             <Stethoscope size={20} className="mr-3" />
-//             <span>Appointments</span>
-//           </a>
-//           <a href="#" className="flex items-center px-4 py-3 mt-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-//             <FileText size={20} className="mr-3" />
-//             <span>Medical Records</span>
-//           </a>
-//           <a href="#" className="flex items-center px-4 py-3 mt-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-//             <Settings size={20} className="mr-3" />
-//             <span>Settings</span>
-//           </a>
-//           <a href="#" className="flex items-center px-4 py-3 mt-2 text-red-600 hover:bg-red-50 rounded-lg">
-//             <LogOut size={20} className="mr-3" />
-//             <span>Logout</span>
-//           </a>
-//         </nav>
-//       </div>
-
-//       {/* Main content */}
-//       <div className="flex-1 flex flex-col overflow-hidden lg:pl-64">
-//         {/* Top navigation */}
-//         <header className="bg-white shadow-sm z-10">
-//           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-//             <button 
-//               className="lg:hidden text-gray-500 hover:text-gray-700"
-//               onClick={() => setSidebarOpen(true)}
-//             >
-//               <Menu size={24} />
-//             </button>
-            
-//             <div className="relative flex-1 max-w-md mx-4">
-//               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-//                 <Search size={18} className="text-gray-400" />
-//               </div>
-//               <input
-//                 type="text"
-//                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-//                 placeholder="Search..."
-//               />
-//             </div>
-            
-//             <div className="flex items-center">
-//               <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-//                 <span className="sr-only">View notifications</span>
-//                 <Bell size={24} />
-//               </button>
-//               <div className="ml-4 flex items-center">
-//                 <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-//                   U
-//                 </div>
-//                 <span className="ml-2 text-sm font-medium text-gray-700 hidden md:block">User Name</span>
-//               </div>
-//             </div>
-//           </div>
-//         </header>
-
-//         {/* Main content area */}
-//         <main className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-6">
-//           <div className="max-w-7xl mx-auto">
-//             {/* Welcome section */}
-//             <div className="mb-8">
-//               <h1 className="text-2xl font-bold text-gray-900">Welcome back, User!</h1>
-//               <p className="text-gray-600">Here's what's happening with your health today.</p>
-//             </div>
-
-//             {/* Stats cards */}
-//             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-//               <div className="bg-white overflow-hidden shadow rounded-lg">
-//                 <div className="p-5">
-//                   <div className="flex items-center">
-//                     <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
-//                       <Calendar className="h-6 w-6 text-white" />
-//                     </div>
-//                     <div className="ml-5 w-0 flex-1">
-//                       <dl>
-//                         <dt className="text-sm font-medium text-gray-500 truncate">Upcoming Appointments</dt>
-//                         <dd className="flex items-baseline">
-//                           <div className="text-2xl font-semibold text-gray-900">2</div>
-//                         </dd>
-//                       </dl>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               <div className="bg-white overflow-hidden shadow rounded-lg">
-//                 <div className="p-5">
-//                   <div className="flex items-center">
-//                     <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
-//                       <FileText className="h-6 w-6 text-white" />
-//                     </div>
-//                     <div className="ml-5 w-0 flex-1">
-//                       <dl>
-//                         <dt className="text-sm font-medium text-gray-500 truncate">Prescriptions</dt>
-//                         <dd className="flex items-baseline">
-//                           <div className="text-2xl font-semibold text-gray-900">5</div>
-//                         </dd>
-//                       </dl>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               <div className="bg-white overflow-hidden shadow rounded-lg">
-//                 <div className="p-5">
-//                   <div className="flex items-center">
-//                     <div className="flex-shrink-0 bg-yellow-500 rounded-md p-3">
-//                       <Clock className="h-6 w-6 text-white" />
-//                     </div>
-//                     <div className="ml-5 w-0 flex-1">
-//                       <dl>
-//                         <dt className="text-sm font-medium text-gray-500 truncate">Pending Tests</dt>
-//                         <dd className="flex items-baseline">
-//                           <div className="text-2xl font-semibold text-gray-900">1</div>
-//                         </dd>
-//                       </dl>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               <div className="bg-white overflow-hidden shadow rounded-lg">
-//                 <div className="p-5">
-//                   <div className="flex items-center">
-//                     <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
-//                       <User className="h-6 w-6 text-white" />
-//                     </div>
-//                     <div className="ml-5 w-0 flex-1">
-//                       <dl>
-//                         <dt className="text-sm font-medium text-gray-500 truncate">Active Doctors</dt>
-//                         <dd className="flex items-baseline">
-//                           <div className="text-2xl font-semibold text-gray-900">3</div>
-//                         </dd>
-//                       </dl>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Appointments section */}
-//             <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-//               <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-//                 <h3 className="text-lg leading-6 font-medium text-gray-900">Upcoming Appointments</h3>
-//                 <p className="mt-1 text-sm text-gray-500">Your scheduled appointments with doctors.</p>
-//               </div>
-//               <div className="bg-white overflow-hidden">
-//                 <ul className="divide-y divide-gray-200">
-//                   {appointments.map((appointment) => (
-//                     <li key={appointment._id} className="px-4 py-4 sm:px-6">
-//                       <div className="flex items-center justify-between">
-//                         <div className="flex items-center">
-//                           <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-//                             <User className="h-6 w-6 text-blue-600" />
-//                           </div>
-//                           <div className="ml-4">
-//                             <div className="text-sm font-medium text-gray-900">Dr. {appointment.doctorId?.name}</div>
-//                             <div className="text-sm text-gray-500">
-//                               {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
-//                             </div>
-//                           </div>
-//                         </div>
-//                         <div>
-//                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-//                             appointment.status === 'upcoming' ? 'bg-green-100 text-green-800' :
-//                             appointment.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-//                             'bg-yellow-100 text-yellow-800'
-//                           }`}>
-//                             {appointment.status}
-//                           </span>
-//                         </div>
-//                       </div>
-//                       {appointment.reason && (
-//                         <div className="mt-2 text-sm text-gray-500">
-//                           <span className="font-medium">Reason:</span> {appointment.reason}
-//                         </div>
-//                       )}
-//                     </li>
-//                   ))}
-//                 </ul>
-//               </div>
-//               <div className="bg-gray-50 px-4 py-3 sm:px-6 text-right">
-//                 <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-//                   View all appointments
-//                 </a>
-//               </div>
-//             </div>
-
-//             {/* Bottom grid */}
-//             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//               {/* Prescriptions */}
-//               <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-//                 <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-//                   <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Prescriptions</h3>
-//                   <p className="mt-1 text-sm text-gray-500">Your latest prescribed medications.</p>
-//                 </div>
-//                 <div className="bg-white overflow-hidden">
-//                   <ul className="divide-y divide-gray-200">
-//                     {prescriptions.map((prescription) => (
-//                       <li key={prescription._id} className="px-4 py-4 sm:px-6">
-//                         <div className="flex items-center">
-//                           <div className="flex-shrink-0 h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-//                             <FileText className="h-5 w-5 text-green-600" />
-//                           </div>
-//                           <div className="ml-4">
-//                             <div className="text-sm font-medium text-gray-900">{prescription.diagnosis}</div>
-//                             <div className="text-sm text-gray-500">
-//                               Prescribed by Dr. {prescription.doctorId?.name} on {new Date(prescription.createdAt).toLocaleDateString()}
-//                             </div>
-//                           </div>
-//                         </div>
-//                       </li>
-//                     ))}
-//                   </ul>
-//                 </div>
-//                 <div className="bg-gray-50 px-4 py-3 sm:px-6 text-right">
-//                   <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-//                     View all prescriptions
-//                   </a>
-//                 </div>
-//               </div>
-
-//               {/* Available Doctors */}
-//               <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-//                 <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-//                   <h3 className="text-lg leading-6 font-medium text-gray-900">Available Doctors</h3>
-//                   <p className="mt-1 text-sm text-gray-500">Specialists available for consultation.</p>
-//                 </div>
-//                 <div className="bg-white overflow-hidden">
-//                   <ul className="divide-y divide-gray-200">
-//                     {doctors.map((doctor) => (
-//                       <li key={doctor._id} className="px-4 py-4 sm:px-6">
-//                         <div className="flex items-center">
-//                           <div className="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
-//                             <User className="h-5 w-5 text-purple-600" />
-//                           </div>
-//                           <div className="ml-4">
-//                             <div className="text-sm font-medium text-gray-900">Dr. {doctor.name}</div>
-//                             <div className="text-sm text-gray-500">
-//                               {doctor.specialization} • {doctor.experience}
-//                             </div>
-//                           </div>
-//                           <div className="ml-auto">
-//                             <button className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-//                               Book
-//                             </button>
-//                           </div>
-//                         </div>
-//                       </li>
-//                     ))}
-//                   </ul>
-//                 </div>
-//                 <div className="bg-gray-50 px-4 py-3 sm:px-6 text-right">
-//                   <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-//                     View all doctors
-//                   </a>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         </main>
-//       </div>
-//     </div>
-//   )
-// }
-
-
-
-
-
 import { useState, useEffect } from 'react';
-import { Calendar, HeartPulse, Activity, Droplets, Scale, FileText } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getPatientDashboard } from '../../services/patientService';
+import { Link } from 'react-router-dom';
+import { 
+  Calendar, 
+  Clock, 
+  FileText, 
+  Stethoscope,
+  Activity,
+  Heart,
+  TrendingUp,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
+  User,
+  MessageSquare,
+  Plus
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-
-
-const healthData = [
-  { name: 'Mon', bp: 120, sugar: 90, weight: 70 },
-  { name: 'Tue', bp: 125, sugar: 95, weight: 70.2 },
-  { name: 'Wed', bp: 118, sugar: 100, weight: 69.8 },
-  { name: 'Thu', bp: 130, sugar: 105, weight: 70.1 },
-  { name: 'Fri', bp: 128, sugar: 98, weight: 69.9 },
-  { name: 'Sat', bp: 122, sugar: 92, weight: 70 },
-  { name: 'Sun', bp: 120, sugar: 88, weight: 69.8 },
-];
+import { getPatientDashboard } from '../../services/patientService';
 
 export default function PatientDashboard() {
-
-  
-  const { user } = useAuth();   
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [nextAppointment, setNextAppointment] = useState(null);
-  const [recentActivities, setRecentActivities] = useState([]);
-
-  const [healthMetrics, setHealthMetrics] = useState({
-    bloodPressure: '120/80',
-    sugarLevel: '92 mg/dL',
-    weight: '70 kg',
-    bmi: '23.5'
+  const [dashboardData, setDashboardData] = useState({
+    appointments: [],
+    prescriptions: [],
+    doctors: [],
+    healthMetrics: null
   });
 
   useEffect(() => {
-  const fetchDashboard = async () => {
-    try {
-      const data = await getPatientDashboard();
-
-      // ✅ Next Appointment
-      setNextAppointment(data.nextAppointment || null);
-
-      // ✅ Health Summary
-      if (data.healthSummary) {
-        setHealthMetrics({
-          bloodPressure: data.healthSummary.bloodPressure,
-          sugarLevel: data.healthSummary.sugar || data.healthSummary.sugarLevel,
-          weight: data.healthSummary.weight,
-          bmi: data.healthSummary.bmi
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const data = await getPatientDashboard();
+        setDashboardData({
+          appointments: data.appointments || [],
+          prescriptions: data.prescriptions || [],
+          doctors: data.doctors || [],
+          healthMetrics: data.healthMetrics || null
         });
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
       }
+    };
+    fetchData();
+  }, []);
 
-      // ✅ Recent Activities
-      setRecentActivities(data.recentActivities || []);
+  const upcomingAppointments = dashboardData.appointments.filter(
+    a => a.status === 'pending' || a.status === 'confirmed'
+  ).slice(0, 3);
 
-    } catch (error) {
-      console.error('Dashboard fetch error:', error);
-    } finally {
-      setLoading(false);
+  const stats = [
+    {
+      title: 'Upcoming Appointments',
+      value: upcomingAppointments.length,
+      icon: Calendar,
+      color: 'from-emerald-400 to-green-500',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+      link: '/patient/appointments'
+    },
+    {
+      title: 'Active Prescriptions',
+      value: dashboardData.prescriptions.length,
+      icon: FileText,
+      color: 'from-cyan-400 to-teal-500',
+      bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+      link: '/patient/medical-history'
+    },
+    {
+      title: 'My Doctors',
+      value: dashboardData.doctors.length,
+      icon: Stethoscope,
+      color: 'from-violet-400 to-purple-500',
+      bgColor: 'bg-violet-50 dark:bg-violet-900/20',
+      link: '/patient/appointments'
+    },
+    {
+      title: 'Health Score',
+      value: '85%',
+      icon: Heart,
+      color: 'from-rose-400 to-pink-500',
+      bgColor: 'bg-rose-50 dark:bg-rose-900/20',
+      link: '/patient/medical-history'
     }
-  };
+  ];
 
-  fetchDashboard();
-}, []);
-
-
-  const StatCard = ({ title, value, icon: Icon, color }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-      <div className="flex items-center">
-        <div className={`p-3 rounded-lg ${color} bg-opacity-10`}>
-          <Icon className={`h-6 w-6 ${color}`} />
-        </div>
-        <div className="ml-4">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-          <p className="text-2xl font-semibold text-gray-900 dark:text-white">{value}</p>
-        </div>
-      </div>
-    </div>
-  );
+  const quickActions = [
+    { title: 'Book Appointment', icon: Plus, link: '/patient/book-appointment', color: 'emerald' },
+    { title: 'View Records', icon: FileText, link: '/patient/medical-history', color: 'cyan' },
+    { title: 'Chat with Doctor', icon: MessageSquare, link: '/patient/chat', color: 'violet' },
+  ];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      <div className="flex items-center justify-center h-96">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-800 rounded-full animate-spin border-t-emerald-600" />
+          <Heart className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-emerald-600 animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -461,185 +107,194 @@ export default function PatientDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Card */}
-      {/* Welcome Card */}
-<div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg text-white p-6">
-  <h1 className="text-2xl font-bold">
-    Welcome back, {user?.name || 'Patient'}! 👋
-  </h1>
-  <p className="mt-2 text-green-100">
-    Here's what's happening with your health today.
-  </p>
-</div>
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 p-8 text-white shadow-2xl shadow-emerald-500/25">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-sm mb-4">
+              <Heart className="w-4 h-4 mr-2" />
+              Your Health Dashboard
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              Welcome back, {user?.name?.split(' ')[0] || 'Patient'}! 👋
+            </h1>
+            <p className="text-emerald-100 text-lg max-w-xl">
+              Track your health, manage appointments, and stay connected with your healthcare providers.
+            </p>
+          </div>
+          <div className="mt-6 md:mt-0 flex items-center space-x-3">
+            <Link
+              to="/patient/book-appointment"
+              className="inline-flex items-center px-6 py-3 bg-white text-emerald-600 font-semibold rounded-xl hover:bg-emerald-50 transition-all shadow-lg hover:shadow-xl"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Book Appointment
+            </Link>
+          </div>
+        </div>
+      </div>
 
-      
-      {/* Next Appointment */}
-      {nextAppointment && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Next Appointment</h2>
-              <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                {nextAppointment.status}
-              </span>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <Link
+            key={index}
+            to={stat.link}
+            className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-10 group-hover:opacity-20 transition-opacity rounded-full -translate-y-16 translate-x-16" />
+            
+            <div className={`inline-flex p-3 rounded-xl ${stat.bgColor} mb-4`}>
+              <stat.icon className={`w-6 h-6 bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`} style={{ color: 'currentColor' }} />
             </div>
             
-            <div className="mt-4">
-              <div className="flex items-center">
-                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                  <span className="text-green-600 dark:text-green-300 text-lg font-medium">
-                    {nextAppointment.doctorName.split(' ').map(n => n[0]).join('')}
-                  </span>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{stat.title}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+              <ArrowRight className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Upcoming Appointments */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+                  <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">{nextAppointment.doctorName}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{nextAppointment.specialization}</p>
-                </div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Upcoming Appointments</h2>
               </div>
-              
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-gray-400 mr-2" />
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Date</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {new Date(nextAppointment.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <svg className="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Time</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{nextAppointment.time}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 flex space-x-3">
-                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                  Join Video Call
-                </button>
-                <button className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                  Reschedule
-                </button>
-              </div>
+              <Link
+                to="/patient/appointments"
+                className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium flex items-center"
+              >
+                View All <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Health Summary */}
-      <div>
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Health Summary</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            title="Blood Pressure" 
-            value={healthMetrics.bloodPressure} 
-            icon={Activity} 
-            color="text-red-500"
-          />
-          <StatCard 
-            title="Sugar Level" 
-            value={healthMetrics.sugarLevel} 
-            icon={Droplets} 
-            color="text-blue-500"
-          />
-          <StatCard 
-            title="Weight" 
-            value={healthMetrics.weight} 
-            icon={Scale} 
-            color="text-yellow-500"
-          />
-          <StatCard 
-            title="BMI" 
-            value={healthMetrics.bmi} 
-            icon={HeartPulse} 
-            color="text-green-500"
-          />
-        </div>
-      </div>
-      
-      {/* Health Chart */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Health Trends</h2>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={healthData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-              <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-              <Tooltip />
-              <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="bp" name="Blood Pressure" stroke="#8884d8" activeDot={{ r: 8 }} />
-              <Line yAxisId="right" type="monotone" dataKey="sugar" name="Sugar Level" stroke="#82ca9d" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-      
-      {/* Recent Activities */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-        
-  <div className="p-6">
-    <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-      Recent Activities
-    </h2>
 
-    <div className="space-y-4">
-      {recentActivities.length > 0 ? (
-        recentActivities.map((activity, index) => (
-          <div
-            key={index}
-            className="flex items-start pb-4 border-b border-gray-200 dark:border-gray-700 last:border-0 last:pb-0"
-          >
-            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              {activity.type === 'appointment' && (
-                <Calendar className="h-5 w-5 text-green-600 dark:text-green-300" />
-              )}
-              {activity.type === 'medical' && (
-                <FileText className="h-5 w-5 text-green-600 dark:text-green-300" />
-              )}
-              {activity.type === 'system' && (
-                <Activity className="h-5 w-5 text-green-600 dark:text-green-300" />
-              )}
-            </div>
-
-            <div className="ml-4 flex-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  {activity.title}
-                </h3>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {activity.time}
-                </span>
+          <div className="p-6">
+            {upcomingAppointments.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <Calendar className="w-8 h-8 text-emerald-500" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Upcoming Appointments</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">Schedule your next checkup today!</p>
+                <Link
+                  to="/patient/book-appointment"
+                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Book Now
+                </Link>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {activity.description}
-              </p>
+            ) : (
+              <div className="space-y-4">
+                {upcomingAppointments.map((appointment, index) => (
+                  <div
+                    key={appointment._id || index}
+                    className="flex items-center p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
+                  >
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/25">
+                      {(appointment.doctorId?.name || appointment.doctorName || 'D')[0]}
+                    </div>
+                    <div className="ml-4 flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        Dr. {appointment.doctorId?.name || appointment.doctorName || 'Unknown'}
+                      </p>
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {new Date(appointment.date).toLocaleDateString()}
+                        <span className="mx-2">•</span>
+                        <Clock className="w-4 h-4 mr-1" />
+                        {appointment.time}
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        appointment.status === 'confirmed'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      }`}>
+                        {appointment.status === 'confirmed' ? (
+                          <><CheckCircle2 className="w-3 h-3 mr-1" /> Confirmed</>
+                        ) : (
+                          <><AlertCircle className="w-3 h-3 mr-1" /> Pending</>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
             </div>
           </div>
-        ))
-      ) : (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          No recent activities found.
-        </p>
-      )}
-    </div>
-  </div>
-</div>
 
-              
+          <div className="p-4 space-y-3">
+            {quickActions.map((action, index) => (
+              <Link
+                key={index}
+                to={action.link}
+                className={`flex items-center p-4 rounded-xl transition-all group hover:shadow-md ${
+                  action.color === 'emerald' ? 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20' :
+                  action.color === 'cyan' ? 'hover:bg-cyan-50 dark:hover:bg-cyan-900/20' :
+                  action.color === 'violet' ? 'hover:bg-violet-50 dark:hover:bg-violet-900/20' :
+                  'hover:bg-rose-50 dark:hover:bg-rose-900/20'
+                }`}
+              >
+                <div className={`p-3 rounded-xl ${
+                  action.color === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
+                  action.color === 'cyan' ? 'bg-cyan-100 dark:bg-cyan-900/30' :
+                  action.color === 'violet' ? 'bg-violet-100 dark:bg-violet-900/30' :
+                  'bg-rose-100 dark:bg-rose-900/30'
+                }`}>
+                  <action.icon className={`w-5 h-5 ${
+                    action.color === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' :
+                    action.color === 'cyan' ? 'text-cyan-600 dark:text-cyan-400' :
+                    action.color === 'violet' ? 'text-violet-600 dark:text-violet-400' :
+                    'text-rose-600 dark:text-rose-400'
+                  }`} />
+                </div>
+                <span className="ml-4 font-medium text-gray-900 dark:text-white flex-1">{action.title}</span>
+                <ArrowRight className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Health Tips */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-800">
+        <div className="flex items-start space-x-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 shadow-lg shadow-emerald-500/25">
+            <TrendingUp className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Daily Health Tip</h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Stay hydrated! Drinking 8 glasses of water daily helps maintain energy levels and supports your immune system. 💧
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

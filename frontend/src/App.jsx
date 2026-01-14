@@ -103,7 +103,7 @@ function App() {
                 <Route path="medical-history" element={<MedicalHistory />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="chat" element={<PatientMessages />} />
-                <Route path="health-tracker" element={<div className="p-6">Health Tracker (Coming Soon)</div>} />
+
                 <Route path="feedback" element={<div className="p-6">Feedback (Coming Soon)</div>} />
               </Route>
               
