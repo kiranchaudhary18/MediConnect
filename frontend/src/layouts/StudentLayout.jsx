@@ -115,7 +115,8 @@ export default function StudentLayout() {
     { name: 'Doctors', icon: Stethoscope, path: '/student/doctors' },
     { name: 'Patient Records', icon: FileText, path: '/student/patient-records' },
     { name: 'Assignments', icon: BookOpen, path: '/student/assignments' },
-    { name: 'AI Learning', icon: MessageCircle, path: '/student/ai-learning' },
+    { name: 'Messages', icon: MessageCircle, path: '/student/messages' },
+    { name: 'AI Learning', icon: Sparkles, path: '/student/ai-learning' },
   ];
 
   const isActive = (path) => location.pathname === path;

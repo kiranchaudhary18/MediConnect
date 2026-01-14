@@ -37,6 +37,7 @@ import StudentDoctors from './pages/student/Doctors';
 import PatientRecords from './pages/student/PatientRecords';
 import StudentAssignments from './pages/student/Assignments';
 import AILearning from './pages/student/AILearning';
+import StudentMessages from './pages/student/Messages';
 
 // Public route wrapper that redirects to dashboard if user is logged in
 const PublicRoute = () => {
@@ -137,6 +138,7 @@ function App() {
                 <Route path="patient-records" element={<PatientRecords />} />
                 <Route path="assignments" element={<StudentAssignments />} />
                 <Route path="ai-learning" element={<AILearning />} />
+                <Route path="messages" element={<StudentMessages />} />
               </Route>
               
               <Route path="*" element={<Navigate to="/" />} />
