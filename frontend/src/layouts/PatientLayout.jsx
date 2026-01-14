@@ -387,10 +387,10 @@ export default function PatientLayout() {
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 focus:outline-none"
                 >
-                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                    {user?.photoURL ? (
+                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center overflow-hidden">
+                    {user?.profilePicture ? (
                       <img 
-                        src={user.photoURL} 
+                        src={user.profilePicture} 
                         alt={user.name || 'User'} 
                         className="h-full w-full rounded-full object-cover"
                       />

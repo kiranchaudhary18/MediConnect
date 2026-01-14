@@ -18,6 +18,7 @@ import DoctorMedicalRecords from './pages/doctor/MedicalRecords';
 import DoctorMessages from './pages/doctor/Messages';
 import DoctorHealthTips from './pages/doctor/HealthTips';
 import DoctorNotifications from './pages/doctor/Notifications';
+import DoctorStudents from './pages/doctor/Students';
 
 // Patient Pages
 import PatientLayout from './layouts/PatientLayout';
@@ -34,6 +35,8 @@ import StudentLayout from './layouts/StudentLayout';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentDoctors from './pages/student/Doctors';
 import PatientRecords from './pages/student/PatientRecords';
+import StudentAssignments from './pages/student/Assignments';
+import AILearning from './pages/student/AILearning';
 
 // Public route wrapper that redirects to dashboard if user is logged in
 const PublicRoute = () => {
@@ -118,6 +121,7 @@ function App() {
                   <Route path="medical-records" element={<DoctorMedicalRecords />} />
                   <Route path="messages" element={<DoctorMessages />} />
                   <Route path="health-tips" element={<DoctorHealthTips />} />
+                  <Route path="students" element={<DoctorStudents />} />
                   <Route path="notifications" element={<DoctorNotifications />} />
               </Route>
               
@@ -131,9 +135,8 @@ function App() {
                 <Route path="dashboard" element={<StudentDashboard />} />
                 <Route path="doctors" element={<StudentDoctors />} />
                 <Route path="patient-records" element={<PatientRecords />} />
-                <Route path="assignments" element={<div className="p-6">Assignments (Coming Soon)</div>} />
-                <Route path="ai-learning" element={<div className="p-6">AI Learning (Coming Soon)</div>} />
-                <Route path="community" element={<div className="p-6">Community (Coming Soon)</div>} />
+                <Route path="assignments" element={<StudentAssignments />} />
+                <Route path="ai-learning" element={<AILearning />} />
               </Route>
               
               <Route path="*" element={<Navigate to="/" />} />

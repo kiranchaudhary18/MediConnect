@@ -96,46 +96,54 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Registered Doctors */}
+      {/* Student Assignments */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Registered Doctors</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Learn from experienced medical professionals</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Assignments</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Case studies assigned for your learning</p>
         </div>
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {doctors.length === 0 ? (
+          {medicalRecords.length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              No doctors registered yet
+              No assignments yet. New case studies will be assigned for your review.
             </div>
           ) : (
-            doctors.slice(0, 2).map((doctor) => (
-              <div key={doctor._id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <img
-                      src={doctor.profilePhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=f97316&color=fff`}
-                      alt={doctor.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">Dr. {doctor.name}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {doctor.specialization || 'General Medicine'} • {doctor.experience || '5+'} years experience
-                      </p>
+            medicalRecords.slice(0, 2).map((record, index) => (
+              <div key={record._id || index} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                        <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">{index + 1}</span>
+                      </span>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">{record.diagnosis || 'Medical Case'}</h3>
                     </div>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      <span className="font-medium">Patient:</span> {record.patientAge} years, {record.patientGender} • <span className="font-medium">Doctor:</span> Dr. {record.doctorName}
+                    </p>
+                    {record.summary && (
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                        {record.summary}
+                      </p>
+                    )}
                   </div>
-                  <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
-                    Available
-                  </span>
+                  <div className="text-right ml-4">
+                    <span className="inline-block px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full mb-2">
+                      {record.status || 'Pending'}
+                    </span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(record.visitDate || record.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
-        {doctors.length > 2 && (
+        {medicalRecords.length > 2 && (
           <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 text-right">
-            <a href="/student/doctors" className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300">
-              View all {doctors.length} doctors →
+            <a href="/student/assignments" className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300">
+              View all {medicalRecords.length} assignments →
             </a>
           </div>
         )}

@@ -133,7 +133,6 @@ const StudentLayout = () => {
     { name: 'Patient Records', icon: FileText, path: '/student/patient-records' },
     { name: 'Assignments', icon: BookOpen, path: '/student/assignments' },
     { name: 'AI Learning', icon: MessageCircle, path: '/student/ai-learning' },
-    { name: 'Community', icon: Users, path: '/student/community' },
   ];
 
   return (
@@ -373,10 +372,10 @@ const StudentLayout = () => {
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center space-x-2 focus:outline-none"
                 >
-                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                    {user?.photoURL ? (
+                  <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center overflow-hidden">
+                    {user?.profilePicture ? (
                       <img 
-                        src={user.photoURL} 
+                        src={user.profilePicture} 
                         alt={user.name || 'User'} 
                         className="h-full w-full rounded-full object-cover"
                       />

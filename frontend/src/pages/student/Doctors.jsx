@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, User, Stethoscope, Star, MapPin, Calendar, MessageSquare, UserPlus, X, Mail, Phone, Award, FileText } from 'lucide-react';
+import { Search, Filter, User, Stethoscope, Star, MapPin, Calendar, MessageSquare, UserPlus, X, Mail, Phone, Award, FileText, Check, Loader2 } from 'lucide-react';
 import { getAvailableDoctors } from '../../services/patientService';
+import axios from '../../utils/axios';
+import { toast } from 'react-hot-toast';
 
 const Doctors = () => {
   const [doctors, setDoctors] = useState([]);
@@ -9,6 +11,8 @@ const Doctors = () => {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [mySelections, setMySelections] = useState([]);
+  const [selectingDoctor, setSelectingDoctor] = useState(null);
 
   // Unique specialties for filter - derived from real data
   const specialties = ['all', ...new Set(doctors.map(doctor => doctor.specialty).filter(Boolean))];
@@ -44,7 +48,36 @@ const Doctors = () => {
       }
     };
     fetchDoctors();
+    fetchMySelections();
   }, []);
+
+  const fetchMySelections = async () => {
+    try {
+      const response = await axios.get('/patient/student/my-doctors');
+      setMySelections(response.data?.data || []);
+    } catch (error) {
+      console.error('Error fetching selections:', error);
+    }
+  };
+
+  const handleSelectDoctor = async (doctorId) => {
+    setSelectingDoctor(doctorId);
+    try {
+      await axios.post('/patient/student/select-doctor', { doctorId });
+      toast.success('Request sent to doctor!');
+      fetchMySelections();
+    } catch (error) {
+      console.error('Error selecting doctor:', error);
+      toast.error(error.response?.data?.message || 'Failed to send request');
+    } finally {
+      setSelectingDoctor(null);
+    }
+  };
+
+  const getSelectionStatus = (doctorId) => {
+    const selection = mySelections.find(s => s.doctor?._id === doctorId);
+    return selection?.status || null;
+  };
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -157,6 +190,37 @@ const Doctors = () => {
                   >
                     View Profile
                   </button>
+                  {getSelectionStatus(doctor.id) === 'accepted' ? (
+                    <button
+                      disabled
+                      className="flex-1 px-4 py-2 text-sm font-medium text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-lg flex items-center justify-center gap-1"
+                    >
+                      <Check className="w-4 h-4" />
+                      Selected
+                    </button>
+                  ) : getSelectionStatus(doctor.id) === 'pending' ? (
+                    <button
+                      disabled
+                      className="flex-1 px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-lg"
+                    >
+                      Pending...
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSelectDoctor(doctor.id)}
+                      disabled={selectingDoctor === doctor.id}
+                      className="flex-1 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                    >
+                      {selectingDoctor === doctor.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" />
+                          Select
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -264,7 +328,28 @@ const Doctors = () => {
               </div>
 
               {/* Close Button */}
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex justify-end gap-3">
+                {getSelectionStatus(selectedDoctor.id) === 'accepted' ? (
+                  <span className="px-4 py-2 text-sm font-medium text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-lg flex items-center gap-1">
+                    <Check className="w-4 h-4" />
+                    Already Selected
+                  </span>
+                ) : getSelectionStatus(selectedDoctor.id) === 'pending' ? (
+                  <span className="px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-lg">
+                    Request Pending
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      handleSelectDoctor(selectedDoctor.id);
+                      closeModal();
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center gap-1"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Select Doctor
+                  </button>
+                )}
                 <button
                   onClick={closeModal}
                   className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
