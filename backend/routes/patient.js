@@ -120,7 +120,37 @@ router.patch('/notifications/:id/read', markNotificationRead);
 router.delete('/notifications/:id', deleteNotification);
 
 // Student: get anonymized medical records for learning
-import { getStudentMedicalRecords } from '../controllers/patientController.js';
+import { getStudentMedicalRecords, aiLearningAssistant, getChatHistories, getChatHistory, createChatHistory, addMessageToChat, deleteChatHistory, getAllStudents, getDoctorAssignments, createAssignment, updateAssignment, deleteAssignment, getStudentAssignments, submitAssignment, gradeAssignment } from '../controllers/patientController.js';
 router.get('/student/medical-records', authorize('student'), getStudentMedicalRecords);
+
+// Student: AI Learning Assistant (uses Grok API)
+router.post('/ai-learning', authorize('student'), aiLearningAssistant);
+
+// Student: Chat History
+router.get('/chat-history', authorize('student'), getChatHistories);
+router.get('/chat-history/:id', authorize('student'), getChatHistory);
+router.post('/chat-history', authorize('student'), createChatHistory);
+router.post('/chat-history/message', authorize('student'), addMessageToChat);
+router.delete('/chat-history/:id', authorize('student'), deleteChatHistory);
+
+// Student: Assignments
+router.get('/student/assignments', authorize('student'), getStudentAssignments);
+router.patch('/student/assignments/:id/submit', authorize('student'), submitAssignment);
+
+// Doctor: Student Management & Assignments
+import { selectDoctor, getMySelectedDoctors, cancelDoctorSelection, getMyStudents, updateStudentSelection } from '../controllers/patientController.js';
+
+router.get('/doctor/students', authorize('doctor'), getMyStudents);
+router.get('/doctor/assignments', authorize('doctor'), getDoctorAssignments);
+router.post('/doctor/assignments', authorize('doctor'), createAssignment);
+router.patch('/doctor/assignments/:id', authorize('doctor'), updateAssignment);
+router.delete('/doctor/assignments/:id', authorize('doctor'), deleteAssignment);
+router.patch('/doctor/assignments/:id/grade', authorize('doctor'), gradeAssignment);
+router.patch('/doctor/student-selection/:id', authorize('doctor'), updateStudentSelection);
+
+// Student: Doctor Selection
+router.post('/student/select-doctor', authorize('student'), selectDoctor);
+router.get('/student/my-doctors', authorize('student'), getMySelectedDoctors);
+router.delete('/student/select-doctor/:id', authorize('student'), cancelDoctorSelection);
 
 export default router;

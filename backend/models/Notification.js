@@ -14,7 +14,11 @@ const notificationSchema = new mongoose.Schema(
     title: { type: String, required: true },
     message: { type: String, required: true },
     tag: { type: String },
-    type: { type: String, enum: ['health_tip', 'system'], default: 'health_tip' },
+    type: { 
+      type: String, 
+      enum: ['health_tip', 'system', 'student_request', 'student_accepted', 'student_rejected', 'assignment'], 
+      default: 'system' 
+    },
     read: { type: Boolean, default: false },
     targetEmail: { type: String }
   },

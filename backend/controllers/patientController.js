@@ -107,6 +107,9 @@ import Appointment from '../models/Appointment.js';
 import MedicalRecord from '../models/MedicalRecord.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
+import ChatHistory from '../models/ChatHistory.js';
+import Assignment from '../models/Assignment.js';
+import StudentDoctorSelection from '../models/StudentDoctorSelection.js';
 
 /* ---------------- DASHBOARD ---------------- */
 export const getDashboard = async (req, res) => {
@@ -1000,6 +1003,836 @@ export const getStudentMedicalRecords = async (req, res) => {
 
     res.json({ success: true, data: records });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------------- STUDENT: AI LEARNING ASSISTANT (GROK) ---------------- */
+export const aiLearningAssistant = async (req, res) => {
+  try {
+    const { message, context } = req.body;
+
+    console.log('🤖 AI Learning request received:', message);
+
+    if (!message) {
+      return res.status(400).json({ success: false, message: 'Message is required' });
+    }
+
+    // Check if Grok API key is available
+    if (!process.env.GROK_API_KEY || process.env.GROK_API_KEY === 'your_grok_api_key_here') {
+      console.log('⚠️ Grok API key not configured, using fallback');
+      return res.json({
+        success: true,
+        response: generateAILearningFallback(message)
+      });
+    }
+
+    const systemPrompt = `You are an AI Medical Learning Assistant for medical students. Your role is to:
+1. Answer the user's SPECIFIC question directly and accurately
+2. Explain medical concepts clearly with proper terminology
+3. Provide practical, actionable information
+4. Help students understand diseases, symptoms, treatments, diet, and lifestyle
+5. When asked about diet or food (like fruits), provide specific lists and recommendations
+
+IMPORTANT: Answer the EXACT question asked. If asked about fruits to avoid in diabetes, list specific fruits, don't give a general diabetes overview.
+
+Format your responses with:
+- Use **bold** for important terms
+- Use bullet points for lists
+- Use ### for section headers
+- Keep responses focused on the specific question asked
+
+Current context: ${context || 'general medical education'}`;
+
+    try {
+      console.log('📡 Calling Grok API...');
+      const response = await axios.post(
+        'https://api.x.ai/v1/chat/completions',
+        {
+          model: 'grok-2-latest',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7,
+          max_tokens: 1500
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.GROK_API_KEY}`
+          },
+          timeout: 30000
+        }
+      );
+
+      console.log('✅ Grok API response received');
+      const content = response.data?.choices?.[0]?.message?.content;
+      if (!content) {
+        console.log('⚠️ Empty response from Grok, using fallback');
+        return res.json({
+          success: true,
+          response: generateAILearningFallback(message)
+        });
+      }
+
+      return res.json({ success: true, response: content });
+    } catch (apiErr) {
+      console.error('❌ Grok AI Learning error:', apiErr.response?.data || apiErr.message);
+      return res.json({
+        success: true,
+        response: generateAILearningFallback(message)
+      });
+    }
+  } catch (err) {
+    console.error('❌ aiLearningAssistant error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Fallback responses for AI Learning when Grok API is unavailable
+function generateAILearningFallback(query) {
+  const lowerQuery = query.toLowerCase();
+
+  // Handle specific fruit/diet questions for diabetes
+  if (lowerQuery.includes('diabetes') && (lowerQuery.includes('fruit') || lowerQuery.includes('eat') || lowerQuery.includes('diet') || lowerQuery.includes('food'))) {
+    return `## Fruits to Avoid or Limit in Diabetes 🍇
+
+When managing diabetes, it's important to be mindful of fruit choices due to their sugar content.
+
+### Fruits to AVOID or Eat in Very Small Amounts:
+1. **Mango** - High glycemic index (GI: 51-56), very sweet
+2. **Grapes** - High sugar content, easy to overeat
+3. **Bananas (ripe)** - Higher GI when fully ripe (GI: 51-62)
+4. **Pineapple** - High GI (66), spikes blood sugar quickly
+5. **Watermelon** - High GI (72), although low carbs per serving
+6. **Cherries** - High natural sugar content
+7. **Dried fruits** - Concentrated sugar (dates, raisins, dried cranberries)
+8. **Canned fruits in syrup** - Added sugars
+
+### Better Fruit Choices for Diabetics:
+- **Berries** (strawberries, blueberries, raspberries) - Low GI
+- **Apples** - Good fiber, moderate GI
+- **Pears** - High fiber, low GI
+- **Citrus fruits** (oranges, grapefruit) - Lower GI
+- **Kiwi** - Low GI, high fiber
+- **Peaches** - Moderate GI when fresh
+
+### Tips:
+- Eat whole fruits, not fruit juices
+- Pair fruits with protein or healthy fats
+- Limit portions to 15g carbs per serving
+- Check blood sugar response to different fruits
+
+*Note: Individual responses may vary. Always monitor your blood sugar levels.*`;
+  }
+
+  if (lowerQuery.includes('diabetes')) {
+    return `## Diabetes Overview
+
+**Diabetes mellitus** is a metabolic disorder characterized by high blood sugar levels.
+
+### Types:
+1. **Type 1 Diabetes** - Autoimmune destruction of pancreatic beta cells
+2. **Type 2 Diabetes** - Insulin resistance and relative insulin deficiency
+3. **Gestational Diabetes** - Develops during pregnancy
+
+### Common Symptoms:
+- Increased thirst (polydipsia)
+- Frequent urination (polyuria)
+- Unexplained weight loss
+- Fatigue and weakness
+- Blurred vision
+- Slow-healing wounds
+
+### Diagnosis:
+- Fasting blood glucose ≥126 mg/dL
+- HbA1c ≥6.5%
+- Random blood glucose ≥200 mg/dL with symptoms
+
+Would you like me to explain more about treatment options or complications?`;
+  }
+
+  if (lowerQuery.includes('heart') || lowerQuery.includes('cardiac')) {
+    return `## Heart Failure Stages
+
+Heart failure is classified using the **NYHA (New York Heart Association)** classification:
+
+### Stage I - Mild
+- No limitation of physical activity
+- Ordinary activity doesn't cause symptoms
+
+### Stage II - Mild
+- Slight limitation of physical activity
+- Comfortable at rest, ordinary activity causes fatigue
+
+### Stage III - Moderate
+- Marked limitation of physical activity
+- Less than ordinary activity causes symptoms
+
+### Stage IV - Severe
+- Unable to carry out any physical activity without discomfort
+- Symptoms at rest
+
+### Key Treatment Approaches:
+- ACE inhibitors / ARBs
+- Beta-blockers
+- Diuretics
+- Lifestyle modifications
+
+Do you want me to elaborate on any specific stage or treatment?`;
+  }
+
+  if (lowerQuery.includes('anatomy') || lowerQuery.includes('quiz')) {
+    return `## Anatomy Quiz 🎯
+
+Let's test your knowledge! Here are some questions:
+
+**Question 1:** Which organ is responsible for filtering blood and producing urine?
+**Answer:** The **Kidneys** - They filter about 120-150 quarts of blood daily.
+
+**Question 2:** How many bones are in the adult human body?
+**Answer:** **206 bones** - Babies are born with about 270 bones that fuse together.
+
+**Question 3:** What is the largest organ in the human body?
+**Answer:** The **Skin** - It covers about 20 square feet in adults.
+
+**Question 4:** Which chamber of the heart pumps blood to the lungs?
+**Answer:** The **Right Ventricle** - It pumps deoxygenated blood to the lungs.
+
+Would you like more quiz questions on a specific topic?`;
+  }
+
+  if (lowerQuery.includes('viral') || lowerQuery.includes('bacterial') || lowerQuery.includes('infection')) {
+    return `## Viral vs Bacterial Infections
+
+### Key Differences:
+
+| Aspect | Viral | Bacterial |
+|--------|-------|-----------|
+| **Cause** | Viruses | Bacteria |
+| **Size** | Smaller | Larger |
+| **Treatment** | Antivirals (limited) | Antibiotics |
+| **Examples** | Cold, Flu, COVID-19 | Strep throat, UTI |
+
+### Viral Infections:
+- Cannot be treated with antibiotics
+- Often resolve on their own
+- Antiviral medications for specific viruses
+- Prevention through vaccines
+
+### Bacterial Infections:
+- Treated with antibiotics
+- Can become antibiotic-resistant
+- May require culture for proper treatment
+- Prevention through hygiene and vaccines
+
+### Clinical Clues:
+- **Viral**: Clear runny nose, body aches, gradual onset
+- **Bacterial**: Colored discharge, localized symptoms, may have fever
+
+Need more details on specific infections?`;
+  }
+
+  // Default response
+  return `Thank you for your question about "${query}".
+
+As your AI Medical Learning Assistant, I can help you understand various medical topics.
+
+### Topics I Can Help With:
+- **Disease Pathophysiology** - How diseases develop and progress
+- **Clinical Symptoms** - Signs and symptoms of various conditions
+- **Diagnostic Criteria** - How conditions are diagnosed
+- **Treatment Protocols** - Standard treatment approaches
+- **Pharmacology** - Drug mechanisms and interactions
+- **Anatomy & Physiology** - Body systems and functions
+
+### Tips for Effective Learning:
+1. Start with basic concepts before advancing
+2. Use clinical case studies for practical application
+3. Create flashcards for key terms
+4. Practice with quizzes regularly
+
+Feel free to ask specific questions about any medical topic, and I'll provide detailed explanations!
+
+**Note:** AI responses are for educational purposes only. Always consult medical professionals for real clinical decisions.`;
+}
+
+/* ---------------- STUDENT: CHAT HISTORY FUNCTIONS ---------------- */
+
+// Get all chat histories for current user
+export const getChatHistories = async (req, res) => {
+  try {
+    const chats = await ChatHistory.find({ user: req.user._id })
+      .select('title createdAt updatedAt')
+      .sort({ updatedAt: -1 });
+    
+    res.json({ success: true, data: chats });
+  } catch (err) {
+    console.error('getChatHistories error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Get single chat history
+export const getChatHistory = async (req, res) => {
+  try {
+    const chat = await ChatHistory.findOne({ 
+      _id: req.params.id, 
+      user: req.user._id 
+    });
+    
+    if (!chat) {
+      return res.status(404).json({ success: false, message: 'Chat not found' });
+    }
+    
+    res.json({ success: true, data: chat });
+  } catch (err) {
+    console.error('getChatHistory error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Create new chat
+export const createChatHistory = async (req, res) => {
+  try {
+    const chat = await ChatHistory.create({
+      user: req.user._id,
+      title: 'New Chat',
+      messages: []
+    });
+    
+    res.status(201).json({ success: true, data: chat });
+  } catch (err) {
+    console.error('createChatHistory error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Add message to chat and get AI response
+export const addMessageToChat = async (req, res) => {
+  try {
+    const { message, chatId } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ success: false, message: 'Message is required' });
+    }
+
+    let chat;
+    
+    // If chatId provided, find existing chat, otherwise create new one
+    if (chatId) {
+      chat = await ChatHistory.findOne({ _id: chatId, user: req.user._id });
+      if (!chat) {
+        return res.status(404).json({ success: false, message: 'Chat not found' });
+      }
+    } else {
+      chat = await ChatHistory.create({
+        user: req.user._id,
+        title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+        messages: []
+      });
+    }
+
+    // Add user message
+    chat.messages.push({
+      role: 'user',
+      content: message,
+      timestamp: new Date()
+    });
+
+    // Get AI response
+    let aiResponse;
+    
+    if (process.env.GROK_API_KEY && process.env.GROK_API_KEY !== 'your_grok_api_key_here') {
+      try {
+        console.log('📡 Calling Grok API for chat...');
+        const response = await axios.post(
+          'https://api.x.ai/v1/chat/completions',
+          {
+            model: 'grok-2-latest',
+            messages: [
+              { 
+                role: 'system', 
+                content: `You are an AI Medical Learning Assistant for medical students. Answer questions accurately and specifically. Format responses with markdown.` 
+              },
+              ...chat.messages.map(m => ({ role: m.role, content: m.content }))
+            ],
+            temperature: 0.7,
+            max_tokens: 1500
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.GROK_API_KEY}`
+            },
+            timeout: 30000
+          }
+        );
+        
+        aiResponse = response.data?.choices?.[0]?.message?.content || generateAILearningFallback(message);
+      } catch (apiErr) {
+        console.error('❌ Grok API error:', apiErr.message);
+        aiResponse = generateAILearningFallback(message);
+      }
+    } else {
+      aiResponse = generateAILearningFallback(message);
+    }
+
+    // Add AI response
+    chat.messages.push({
+      role: 'assistant',
+      content: aiResponse,
+      timestamp: new Date()
+    });
+
+    // Update title if first message
+    if (chat.messages.filter(m => m.role === 'user').length === 1) {
+      chat.title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+    }
+
+    await chat.save();
+
+    res.json({ 
+      success: true, 
+      data: {
+        chatId: chat._id,
+        response: aiResponse,
+        chat: chat
+      }
+    });
+  } catch (err) {
+    console.error('addMessageToChat error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Delete chat history
+export const deleteChatHistory = async (req, res) => {
+  try {
+    const chat = await ChatHistory.findOneAndDelete({ 
+      _id: req.params.id, 
+      user: req.user._id 
+    });
+    
+    if (!chat) {
+      return res.status(404).json({ success: false, message: 'Chat not found' });
+    }
+    
+    res.json({ success: true, message: 'Chat deleted successfully' });
+  } catch (err) {
+    console.error('deleteChatHistory error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------------- DOCTOR: STUDENT MANAGEMENT & ASSIGNMENTS ---------------- */
+
+// Get all students (for doctor)
+export const getAllStudents = async (req, res) => {
+  try {
+    const students = await User.find({ role: 'student' })
+      .select('name email profilePicture createdAt')
+      .sort({ createdAt: -1 });
+
+    // Get assignment count for each student
+    const studentsWithStats = await Promise.all(
+      students.map(async (student) => {
+        const totalAssignments = await Assignment.countDocuments({ 
+          student: student._id,
+          doctor: req.user._id 
+        });
+        const completedAssignments = await Assignment.countDocuments({ 
+          student: student._id,
+          doctor: req.user._id,
+          status: 'completed'
+        });
+        const pendingAssignments = await Assignment.countDocuments({ 
+          student: student._id,
+          doctor: req.user._id,
+          status: { $in: ['pending', 'in-progress'] }
+        });
+
+        return {
+          ...student.toObject(),
+          totalAssignments,
+          completedAssignments,
+          pendingAssignments
+        };
+      })
+    );
+
+    res.json({ success: true, data: studentsWithStats });
+  } catch (err) {
+    console.error('getAllStudents error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Get assignments created by doctor
+export const getDoctorAssignments = async (req, res) => {
+  try {
+    const assignments = await Assignment.find({ doctor: req.user._id })
+      .populate('student', 'name email profilePicture')
+      .populate('medicalRecord', 'diagnosis treatment')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: assignments });
+  } catch (err) {
+    console.error('getDoctorAssignments error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Create assignment for student
+export const createAssignment = async (req, res) => {
+  try {
+    const { studentId, title, description, type, dueDate, medicalRecordId } = req.body;
+
+    if (!studentId || !title || !description || !dueDate) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Student, title, description, and due date are required' 
+      });
+    }
+
+    // Verify student exists
+    const student = await User.findOne({ _id: studentId, role: 'student' });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const assignment = await Assignment.create({
+      title,
+      description,
+      type: type || 'case-study',
+      doctor: req.user._id,
+      student: studentId,
+      medicalRecord: medicalRecordId || null,
+      dueDate: new Date(dueDate),
+      status: 'pending'
+    });
+
+    // Create notification for student
+    await Notification.create({
+      user: studentId,
+      title: 'New Assignment',
+      message: `Dr. ${req.user.name} has assigned you: ${title}`,
+      type: 'assignment'
+    });
+
+    const populatedAssignment = await Assignment.findById(assignment._id)
+      .populate('student', 'name email')
+      .populate('medicalRecord', 'diagnosis');
+
+    res.status(201).json({ success: true, data: populatedAssignment });
+  } catch (err) {
+    console.error('createAssignment error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Update assignment
+export const updateAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const assignment = await Assignment.findOneAndUpdate(
+      { _id: id, doctor: req.user._id },
+      { ...updates, updatedAt: Date.now() },
+      { new: true }
+    ).populate('student', 'name email');
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    res.json({ success: true, data: assignment });
+  } catch (err) {
+    console.error('updateAssignment error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Delete assignment
+export const deleteAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const assignment = await Assignment.findOneAndDelete({ 
+      _id: id, 
+      doctor: req.user._id 
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    res.json({ success: true, message: 'Assignment deleted successfully' });
+  } catch (err) {
+    console.error('deleteAssignment error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Get assignments for student
+export const getStudentAssignments = async (req, res) => {
+  try {
+    const assignments = await Assignment.find({ student: req.user._id })
+      .populate('doctor', 'name email specialization')
+      .populate('medicalRecord', 'diagnosis treatment patientAge patientGender')
+      .sort({ dueDate: 1 });
+
+    res.json({ success: true, data: assignments });
+  } catch (err) {
+    console.error('getStudentAssignments error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Submit assignment response (for student)
+export const submitAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { response } = req.body;
+
+    const assignment = await Assignment.findOneAndUpdate(
+      { _id: id, student: req.user._id },
+      { 
+        studentResponse: response, 
+        status: 'submitted',
+        submittedAt: Date.now(),
+        updatedAt: Date.now() 
+      },
+      { new: true }
+    ).populate('doctor', 'name');
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    // Notify doctor
+    await Notification.create({
+      user: assignment.doctor._id,
+      title: 'Assignment Submitted',
+      message: `${req.user.name} has submitted: ${assignment.title}`,
+      type: 'assignment'
+    });
+
+    res.json({ success: true, data: assignment });
+  } catch (err) {
+    console.error('submitAssignment error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Grade assignment (for doctor)
+export const gradeAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { feedback, grade } = req.body;
+
+    const assignment = await Assignment.findOneAndUpdate(
+      { _id: id, doctor: req.user._id },
+      { 
+        feedback, 
+        grade,
+        status: 'completed',
+        updatedAt: Date.now() 
+      },
+      { new: true }
+    ).populate('student', 'name');
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    // Notify student
+    await Notification.create({
+      user: assignment.student._id,
+      title: 'Assignment Graded',
+      message: `Your assignment "${assignment.title}" has been graded: ${grade}`,
+      type: 'assignment'
+    });
+
+    res.json({ success: true, data: assignment });
+  } catch (err) {
+    console.error('gradeAssignment error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ---------------- STUDENT-DOCTOR SELECTION ---------------- */
+
+// Student: Select a doctor
+export const selectDoctor = async (req, res) => {
+  try {
+    const { doctorId, message } = req.body;
+
+    if (!doctorId) {
+      return res.status(400).json({ success: false, message: 'Doctor ID is required' });
+    }
+
+    // Check if doctor exists
+    const doctor = await User.findOne({ _id: doctorId, role: 'doctor' });
+    if (!doctor) {
+      return res.status(404).json({ success: false, message: 'Doctor not found' });
+    }
+
+    // Check if already selected
+    const existing = await StudentDoctorSelection.findOne({
+      student: req.user._id,
+      doctor: doctorId
+    });
+
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'You have already selected this doctor' });
+    }
+
+    // Create selection
+    const selection = await StudentDoctorSelection.create({
+      student: req.user._id,
+      doctor: doctorId,
+      message: message || '',
+      status: 'pending'
+    });
+
+    // Notify doctor
+    await Notification.create({
+      user: doctorId,
+      title: 'New Student Request',
+      message: `${req.user.name} wants to learn under your guidance`,
+      type: 'student_request'
+    });
+
+    res.status(201).json({ success: true, data: selection, message: 'Request sent to doctor' });
+  } catch (err) {
+    console.error('selectDoctor error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Student: Get my selected doctors
+export const getMySelectedDoctors = async (req, res) => {
+  try {
+    const selections = await StudentDoctorSelection.find({ student: req.user._id })
+      .populate('doctor', 'name email specialization profilePicture')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: selections });
+  } catch (err) {
+    console.error('getMySelectedDoctors error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Student: Cancel selection
+export const cancelDoctorSelection = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const selection = await StudentDoctorSelection.findOneAndDelete({
+      _id: id,
+      student: req.user._id
+    });
+
+    if (!selection) {
+      return res.status(404).json({ success: false, message: 'Selection not found' });
+    }
+
+    res.json({ success: true, message: 'Selection cancelled' });
+  } catch (err) {
+    console.error('cancelDoctorSelection error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Doctor: Get students who selected me
+export const getMyStudents = async (req, res) => {
+  try {
+    const selections = await StudentDoctorSelection.find({ 
+      doctor: req.user._id,
+      status: { $in: ['pending', 'accepted'] }
+    })
+      .populate('student', 'name email profilePicture createdAt')
+      .sort({ createdAt: -1 });
+
+    // Get assignment stats for each student
+    const studentsWithStats = await Promise.all(
+      selections.map(async (sel) => {
+        const totalAssignments = await Assignment.countDocuments({ 
+          student: sel.student._id,
+          doctor: req.user._id 
+        });
+        const completedAssignments = await Assignment.countDocuments({ 
+          student: sel.student._id,
+          doctor: req.user._id,
+          status: 'completed'
+        });
+        const pendingAssignments = await Assignment.countDocuments({ 
+          student: sel.student._id,
+          doctor: req.user._id,
+          status: { $in: ['pending', 'in-progress'] }
+        });
+
+        return {
+          _id: sel.student._id,
+          name: sel.student.name,
+          email: sel.student.email,
+          profilePicture: sel.student.profilePicture,
+          createdAt: sel.student.createdAt,
+          selectionStatus: sel.status,
+          selectionId: sel._id,
+          selectionMessage: sel.message,
+          selectedAt: sel.createdAt,
+          totalAssignments,
+          completedAssignments,
+          pendingAssignments
+        };
+      })
+    );
+
+    res.json({ success: true, data: studentsWithStats });
+  } catch (err) {
+    console.error('getMyStudents error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Doctor: Accept/Reject student selection
+export const updateStudentSelection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['accepted', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const selection = await StudentDoctorSelection.findOneAndUpdate(
+      { _id: id, doctor: req.user._id },
+      { status, updatedAt: Date.now() },
+      { new: true }
+    ).populate('student', 'name');
+
+    if (!selection) {
+      return res.status(404).json({ success: false, message: 'Selection not found' });
+    }
+
+    // Notify student
+    await Notification.create({
+      user: selection.student._id,
+      title: status === 'accepted' ? 'Request Accepted' : 'Request Declined',
+      message: status === 'accepted' 
+        ? `Dr. ${req.user.name} has accepted your learning request!`
+        : `Dr. ${req.user.name} has declined your request`,
+      type: 'student_request'
+    });
+
+    res.json({ success: true, data: selection });
+  } catch (err) {
+    console.error('updateStudentSelection error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
