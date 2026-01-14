@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, BookOpen, Stethoscope, Brain, Loader2, Plus, History, X, Trash2, MessageSquare } from 'lucide-react';
+import { Send, Bot, User, Sparkles, BookOpen, Stethoscope, Brain, Loader2, Plus, History, X, Trash2, MessageSquare, PanelLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from '../../utils/axios';
 
@@ -31,7 +31,7 @@ What would you like to learn about today?`,
     { icon: Stethoscope, text: 'Explain common symptoms of diabetes', category: 'Symptoms' },
     { icon: Brain, text: 'What are the stages of heart failure?', category: 'Conditions' },
     { icon: BookOpen, text: 'Quiz me on anatomy basics', category: 'Study' },
-    { icon: Sparkles, text: 'Explain the difference between viral and bacterial infections', category: 'Concepts' },
+    { icon: Sparkles, text: 'Explain viral vs bacterial infections', category: 'Concepts' },
   ];
 
   const scrollToBottom = () => {
@@ -42,12 +42,10 @@ What would you like to learn about today?`,
     scrollToBottom();
   }, [messages]);
 
-  // Load chat histories on mount
   useEffect(() => {
     loadChatHistories();
   }, []);
 
-  // Initialize with welcome message
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([welcomeMessage]);
@@ -121,7 +119,6 @@ What would you like to learn about today?`,
       timestamp: new Date()
     };
 
-    // If this is first message (only welcome message), clear it
     if (messages.length === 1 && messages[0].id === 'welcome') {
       setMessages([userMessage]);
     } else {
@@ -131,7 +128,6 @@ What would you like to learn about today?`,
     setLoading(true);
 
     try {
-      // Send message with chatId
       const response = await axios.post('/patient/chat-history/message', {
         message: messageText,
         chatId: currentChatId
@@ -139,10 +135,9 @@ What would you like to learn about today?`,
 
       const data = response.data?.data;
       
-      // Update chat ID if new chat was created
       if (data?.chatId && !currentChatId) {
         setCurrentChatId(data.chatId);
-        loadChatHistories(); // Refresh history list
+        loadChatHistories();
       }
 
       const aiResponse = {
@@ -193,26 +188,26 @@ What would you like to learn about today?`,
   };
 
   return (
-    <div className="h-[calc(100vh-180px)] flex">
+    <div className="h-[calc(100vh-180px)] flex rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       {/* History Sidebar */}
-      <div className={`${showHistory ? 'w-80' : 'w-0'} transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col`}>
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div className={`${showHistory ? 'w-80' : 'w-0'} transition-all duration-300 overflow-hidden bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col`}>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <History className="w-5 h-5" />
+            <History className="w-5 h-5 text-teal-500" />
             Chat History
           </h2>
           <button
             onClick={() => setShowHistory(false)}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
         
         <div className="p-3">
           <button
             onClick={startNewChat}
-            className="w-full flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl hover:from-teal-600 hover:to-cyan-700 transition-all font-medium shadow-lg shadow-teal-500/25"
           >
             <Plus className="w-4 h-4" />
             New Chat
@@ -221,41 +216,46 @@ What would you like to learn about today?`,
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loadingHistory ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
             </div>
           ) : chatHistories.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-              No chat history yet
-            </p>
+            <div className="text-center py-8">
+              <MessageSquare className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">No chat history yet</p>
+            </div>
           ) : (
             chatHistories.map((chat) => (
               <div
                 key={chat._id}
                 onClick={() => loadChat(chat._id)}
-                className={`group p-3 rounded-lg cursor-pointer transition-all ${
+                className={`group p-3 rounded-xl cursor-pointer transition-all ${
                   currentChatId === chat._id
-                    ? 'bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/25'
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-800'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <MessageSquare className={`w-4 h-4 flex-shrink-0 ${currentChatId === chat._id ? 'text-white' : 'text-teal-500'}`} />
+                      <p className={`text-sm font-medium truncate ${currentChatId === chat._id ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                         {chat.title}
                       </p>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className={`text-xs mt-1 ${currentChatId === chat._id ? 'text-teal-100' : 'text-gray-500 dark:text-gray-400'}`}>
                       {formatDate(chat.updatedAt)}
                     </p>
                   </div>
                   <button
                     onClick={(e) => deleteChat(chat._id, e)}
-                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-all"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      currentChatId === chat._id 
+                        ? 'opacity-0 group-hover:opacity-100 hover:bg-white/20' 
+                        : 'opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20'
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className={`w-4 h-4 ${currentChatId === chat._id ? 'text-white' : 'text-red-500'}`} />
                   </button>
                 </div>
               </div>
@@ -267,46 +267,44 @@ What would you like to learn about today?`,
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-t-xl shadow-sm p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Chat History"
-              >
-                <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Learning Assistant</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Your personal medical education companion</p>
-              </div>
-            </div>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
-              onClick={startNewChat}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all text-sm"
+              onClick={() => setShowHistory(!showHistory)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+              title="Chat History"
             >
-              <Plus className="w-4 h-4" />
-              New Chat
+              {showHistory ? <PanelLeft className="w-5 h-5 text-teal-500" /> : <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
             </button>
+            <div className="p-2.5 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl shadow-lg shadow-teal-500/25">
+              <Brain className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">AI Learning Assistant</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Your medical education companion</p>
+            </div>
           </div>
+          <button
+            onClick={startNewChat}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl hover:from-teal-600 hover:to-cyan-700 transition-all text-sm font-medium shadow-lg shadow-teal-500/25"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Chat</span>
+          </button>
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-950">
           {messages.map((message) => (
             <div
               key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`flex items-start gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+              <div className={`flex items-start gap-3 max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-lg ${
                   message.role === 'user' 
-                    ? 'bg-orange-500' 
-                    : 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                    ? 'bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-500/25' 
+                    : 'bg-gradient-to-br from-cyan-500 to-teal-600 shadow-cyan-500/25'
                 }`}>
                   {message.role === 'user' ? (
                     <User className="w-4 h-4 text-white" />
@@ -316,8 +314,8 @@ What would you like to learn about today?`,
                 </div>
                 <div className={`rounded-2xl px-4 py-3 ${
                   message.role === 'user'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                    ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/25'
+                    : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm border border-gray-100 dark:border-gray-800'
                 }`}>
                   <div 
                     className={`prose prose-sm max-w-none ${
@@ -333,7 +331,7 @@ What would you like to learn about today?`,
                     }}
                   />
                   <p className={`text-xs mt-2 ${
-                    message.role === 'user' ? 'text-orange-100' : 'text-gray-400'
+                    message.role === 'user' ? 'text-teal-100' : 'text-gray-400'
                   }`}>
                     {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -345,12 +343,12 @@ What would you like to learn about today?`,
           {loading && (
             <div className="flex justify-start">
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl px-4 py-3 shadow-sm">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                    <Loader2 className="w-4 h-4 animate-spin text-teal-500" />
                     <span className="text-sm text-gray-500 dark:text-gray-400">Thinking...</span>
                   </div>
                 </div>
@@ -363,17 +361,17 @@ What would you like to learn about today?`,
 
         {/* Quick Prompts */}
         {messages.length <= 1 && (
-          <div className="bg-gray-50 dark:bg-gray-900 px-4 pb-2">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick prompts:</p>
+          <div className="px-4 pb-3 bg-gray-50 dark:bg-gray-950">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">Quick prompts:</p>
             <div className="flex flex-wrap gap-2">
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => sendMessage(prompt.text)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-teal-300 dark:hover:border-teal-700 hover:shadow-md transition-all text-gray-700 dark:text-gray-300"
                 >
-                  <prompt.icon className="w-4 h-4 text-purple-500" />
-                  {prompt.text.substring(0, 30)}...
+                  <prompt.icon className="w-4 h-4 text-teal-500" />
+                  <span className="truncate max-w-[200px]">{prompt.text}</span>
                 </button>
               ))}
             </div>
@@ -381,24 +379,24 @@ What would you like to learn about today?`,
         )}
 
         {/* Input Area */}
-        <div className="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <div className="flex items-end gap-3">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about medical topics..."
-              className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
               rows={1}
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
             <button
               onClick={() => sendMessage()}
               disabled={!input.trim() || loading}
-              className={`p-3 rounded-xl transition-colors ${
+              className={`p-3 rounded-xl transition-all ${
                 input.trim() && !loading
-                  ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700 shadow-lg shadow-teal-500/25'
+                  : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
               }`}
             >
               <Send className="w-5 h-5" />

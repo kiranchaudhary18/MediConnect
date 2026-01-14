@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle, Clock, Eye, FileText, Search, Filter, Send, X, Loader2 } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, Eye, FileText, Search, Filter, Send, X, Loader2, Award, CalendarDays, ArrowRight } from 'lucide-react';
 import axios from '../../utils/axios';
 import { toast } from 'react-hot-toast';
 
@@ -42,21 +42,24 @@ const Assignments = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      pending: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-300', icon: BookOpen },
-      'in-progress': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-400', icon: Clock },
-      submitted: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-400', icon: Send },
-      completed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-400', icon: CheckCircle },
-      overdue: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-400', icon: Clock }
+  const getStatusConfig = (status) => {
+    const configs = {
+      pending: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', icon: BookOpen, label: 'Pending' },
+      'in-progress': { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', icon: Clock, label: 'In Progress' },
+      submitted: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400', icon: Send, label: 'Submitted' },
+      completed: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', icon: CheckCircle, label: 'Completed' },
+      overdue: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', icon: Clock, label: 'Overdue' }
     };
-    const style = styles[status] || styles.pending;
-    const Icon = style.icon;
-    
+    return configs[status] || configs.pending;
+  };
+
+  const getStatusBadge = (status) => {
+    const config = getStatusConfig(status);
+    const Icon = config.icon;
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${config.bg} ${config.text}`}>
+        <Icon className="w-3.5 h-3.5" />
+        {config.label}
       </span>
     );
   };
@@ -85,9 +88,7 @@ const Assignments = () => {
 
     setSubmitting(true);
     try {
-      await axios.patch(`/patient/student/assignments/${selectedAssignment._id}/submit`, {
-        response
-      });
+      await axios.patch(`/patient/student/assignments/${selectedAssignment._id}/submit`, { response });
       toast.success('Assignment submitted successfully!');
       setSubmitModal(false);
       fetchAssignments();
@@ -109,7 +110,10 @@ const Assignments = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading assignments...</p>
+        </div>
       </div>
     );
   }
@@ -117,56 +121,59 @@ const Assignments = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Assignments</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Review case studies and complete your learning tasks</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl">
+            <BookOpen className="w-6 h-6 text-white" />
+          </div>
+          My Assignments
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Review case studies and complete your learning tasks</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-teal-50 dark:bg-teal-900/20 rounded-xl">
+              <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.completed}</p>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+              <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.completed}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Completed</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <Send className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Submitted</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.submitted}</p>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.submitted}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Submitted</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
             </div>
           </div>
         </div>
@@ -175,25 +182,21 @@ const Assignments = () => {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-          </div>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
             placeholder="Search assignments..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
         </div>
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Filter className="h-5 w-5 text-gray-400" />
-          </div>
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <select
-            className="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full sm:w-44 pl-10 pr-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 appearance-none"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -204,144 +207,148 @@ const Assignments = () => {
         </div>
       </div>
 
-      {/* Assignments List */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-        {filteredAssignments.length === 0 ? (
-          <div className="p-8 text-center">
-            <BookOpen className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">
-              {assignments.length === 0 ? 'No assignments yet. Your doctors will assign you case studies soon!' : 'No assignments match your filter'}
-            </p>
+      {/* Assignments Grid */}
+      {filteredAssignments.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+          <div className="w-20 h-20 bg-teal-50 dark:bg-teal-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-10 h-10 text-teal-500" />
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredAssignments.map((assignment, index) => (
-              <div 
-                key={assignment._id}
-                className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/30">
-                        <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">{index + 1}</span>
-                      </span>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">{assignment.title}</h3>
-                      {getStatusBadge(assignment.status)}
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {assignments.length === 0 ? 'No assignments yet' : 'No matching assignments'}
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            {assignments.length === 0 ? 'Your doctors will assign you case studies soon!' : 'Try adjusting your filters'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredAssignments.map((assignment, index) => (
+            <div
+              key={assignment._id}
+              className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50 transition-all duration-300"
+            >
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+                      <span className="text-white font-bold">{index + 1}</span>
                     </div>
-                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 ml-11">
-                      <span className="font-medium">Type:</span> <span className="capitalize">{assignment.type}</span> • 
-                      <span className="font-medium ml-2">By:</span> Dr. {assignment.doctor?.name}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 ml-11 line-clamp-2">
-                      {assignment.description}
-                    </p>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{assignment.title}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Dr. {assignment.doctor?.name}</p>
+                    </div>
+                  </div>
+                  {getStatusBadge(assignment.status)}
+                </div>
+
+                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
+                  {assignment.description}
+                </p>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="w-3.5 h-3.5" />
+                      Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                    </span>
                     {assignment.grade && (
-                      <p className="mt-2 ml-11 text-sm">
-                        <span className="font-medium text-green-600 dark:text-green-400">Grade: {assignment.grade}</span>
-                      </p>
+                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                        <Award className="w-3.5 h-3.5" />
+                        Grade: {assignment.grade}
+                      </span>
                     )}
                   </div>
-                  <div className="text-right ml-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Due Date</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {new Date(assignment.dueDate).toLocaleDateString()}
-                    </p>
-                    <div className="mt-2 flex gap-2 justify-end">
-                      <button 
-                        onClick={() => openAssignmentModal(assignment)}
-                        className="inline-flex items-center text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400"
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openAssignmentModal(assignment)}
+                      className="p-2 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {(assignment.status === 'pending' || assignment.status === 'in-progress') && (
+                      <button
+                        onClick={() => openSubmitModal(assignment)}
+                        className="p-2 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors"
                       >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
+                        <Send className="w-4 h-4" />
                       </button>
-                      {(assignment.status === 'pending' || assignment.status === 'in-progress') && (
-                        <button 
-                          onClick={() => openSubmitModal(assignment)}
-                          className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                        >
-                          <Send className="w-4 h-4 mr-1" />
-                          Submit
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Assignment Detail Modal */}
       {modalOpen && selectedAssignment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedAssignment.title}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Assigned by Dr. {selectedAssignment.doctor?.name}
-                  </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-teal-500 to-cyan-600 p-6 text-white relative">
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+                  <BookOpen className="w-7 h-7 text-white" />
                 </div>
-                <button
-                  onClick={closeModal}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
+                <div>
+                  <h2 className="text-xl font-bold">{selectedAssignment.title}</h2>
+                  <p className="text-teal-100">By Dr. {selectedAssignment.doctor?.name}</p>
+                </div>
               </div>
             </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Status and Due Date */}
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
               <div className="flex items-center justify-between">
                 {getStatusBadge(selectedAssignment.status)}
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
                   Due: {new Date(selectedAssignment.dueDate).toLocaleDateString()}
                 </p>
               </div>
 
-              {/* Type */}
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Assignment Type</h3>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Type</h3>
                 <p className="text-gray-900 dark:text-white capitalize">{selectedAssignment.type}</p>
               </div>
 
-              {/* Description */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</h3>
-                <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{selectedAssignment.description}</p>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedAssignment.description}</p>
               </div>
 
-              {/* Medical Record Info */}
               {selectedAssignment.medicalRecord && (
-                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-2">Related Case</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-100 dark:border-teal-900/30">
+                  <h3 className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider mb-2">Related Case</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     <strong>Diagnosis:</strong> {selectedAssignment.medicalRecord.diagnosis}
                   </p>
                   {selectedAssignment.medicalRecord.treatment && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
                       <strong>Treatment:</strong> {selectedAssignment.medicalRecord.treatment}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Student Response */}
               {selectedAssignment.studentResponse && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Your Response</h3>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                  <h3 className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Your Response</h3>
                   <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedAssignment.studentResponse}</p>
                 </div>
               )}
 
-              {/* Feedback */}
               {selectedAssignment.feedback && (
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-green-700 dark:text-green-400 mb-2">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                  <h3 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Award className="w-4 h-4" />
                     Feedback (Grade: {selectedAssignment.grade})
                   </h3>
                   <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedAssignment.feedback}</p>
@@ -349,20 +356,18 @@ const Assignments = () => {
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+            {/* Modal Footer */}
+            <div className="p-6 pt-0 flex justify-end gap-3">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
               >
                 Close
               </button>
               {(selectedAssignment.status === 'pending' || selectedAssignment.status === 'in-progress') && (
                 <button
-                  onClick={() => {
-                    closeModal();
-                    openSubmitModal(selectedAssignment);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
+                  onClick={() => { closeModal(); openSubmitModal(selectedAssignment); }}
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 rounded-xl flex items-center gap-2 shadow-lg shadow-teal-500/25"
                 >
                   <Send className="w-4 h-4" />
                   Submit Response
@@ -375,8 +380,8 @@ const Assignments = () => {
 
       {/* Submit Modal */}
       {submitModal && selectedAssignment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-start justify-between">
                 <div>
@@ -385,7 +390,7 @@ const Assignments = () => {
                 </div>
                 <button
                   onClick={() => setSubmitModal(false)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
                 >
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
@@ -393,8 +398,8 @@ const Assignments = () => {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">{selectedAssignment.description}</p>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300">
+                {selectedAssignment.description}
               </div>
 
               <div>
@@ -404,24 +409,24 @@ const Assignments = () => {
                 <textarea
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                   rows={8}
                   placeholder="Write your analysis, findings, and conclusions here..."
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+            <div className="p-6 pt-0 flex justify-end gap-3">
               <button
                 onClick={() => setSubmitModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-lg"
+                className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !response.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 rounded-xl flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-teal-500/25"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 Submit Assignment
