@@ -1,6 +1,6 @@
-import { MessageSquare, Search, Send, Plus, Users, PanelLeftClose, PanelLeft, GraduationCap, User } from 'lucide-react'
+import { MessageSquare, Search, Send, Plus, Users, PanelLeftClose, PanelLeft, GraduationCap, User, Trash2 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { getConversations, getMessages, sendMessage } from '../../services/messageService'
+import { getConversations, getMessages, sendMessage, deleteMessage } from '../../services/messageService'
 import { getDoctorPatients } from '../../services/patientService'
 import { useAuth } from '../../context/AuthContext'
 import axios from '../../utils/axios'
@@ -116,6 +116,17 @@ export default function Messages() {
       toast.error(err.response?.data?.message || 'Failed to send message')
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await deleteMessage(messageId)
+      setMessages(messages.filter(m => m._id !== messageId))
+      toast.success('Message deleted')
+    } catch (err) {
+      console.error('Failed to delete message', err)
+      toast.error('Failed to delete message')
     }
   }
 
@@ -396,11 +407,22 @@ export default function Messages() {
                           }`}
                         >
                           <p className="text-sm">{msg.message}</p>
-                          <span className={`text-[10px] mt-1 block ${
-                            isOwn ? 'text-blue-100' : 'text-gray-400'
-                          }`}>
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div className={`flex items-center justify-between mt-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                            <span className={`text-[10px] ${
+                              isOwn ? 'text-blue-100' : 'text-gray-400'
+                            }`}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isOwn && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg._id)}
+                                className="text-blue-200 hover:text-red-300 transition-colors"
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

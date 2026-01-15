@@ -10,11 +10,12 @@ import {
   CheckCheck,
   Clock,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import axios from '../../utils/axios';
-import { getConversations, getMessages, sendMessage } from '../../services/messageService';
+import { getConversations, getMessages, sendMessage, deleteMessage } from '../../services/messageService';
 import { toast } from 'react-hot-toast';
 
 export default function StudentMessages() {
@@ -232,6 +233,17 @@ export default function StudentMessages() {
       setNewMessage(messageText);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await deleteMessage(messageId);
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Failed to delete message', error);
+      toast.error('Failed to delete message');
     }
   };
 
@@ -468,11 +480,20 @@ export default function StudentMessages() {
                         <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <span className="text-xs text-gray-400">{msg.time}</span>
                           {isMe && (
-                            <span className="text-xs text-gray-400">
-                              {msg.status === 'sending' && <Clock className="w-3 h-3" />}
-                              {msg.status === 'delivered' && <Check className="w-3 h-3" />}
-                              {msg.status === 'read' && <CheckCheck className="w-3 h-3 text-teal-500" />}
-                            </span>
+                            <>
+                              <span className="text-xs text-gray-400">
+                                {msg.status === 'sending' && <Clock className="w-3 h-3" />}
+                                {msg.status === 'delivered' && <Check className="w-3 h-3" />}
+                                {msg.status === 'read' && <CheckCheck className="w-3 h-3 text-teal-500" />}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>

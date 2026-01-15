@@ -32,3 +32,8 @@ export const markAsRead = async (messageId) => {
   const response = await axios.patch(`/messages/${messageId}/read`);
   return response.data;
 };
+
+export const deleteMessage = async (messageId) => {
+  const response = await axios.delete(`/messages/${messageId}`);
+  return response.data;
+};
