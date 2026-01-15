@@ -1,316 +1,480 @@
-import { MessageSquare, Search, Send, Plus, Users } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { getConversations, getMessages, sendMessage, getMyDoctors } from '../../services/messageService'
-import toast from 'react-hot-toast'
+import { useState, useEffect, useRef } from 'react';
+import { 
+  MessageSquare, 
+  Send, 
+  Search, 
+  User, 
+  Stethoscope,
+  GraduationCap,
+  Check,
+  CheckCheck,
+  Clock,
+  ArrowLeft,
+  RefreshCw
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { getConversations, getMessages, sendMessage, getMyDoctors } from '../../services/messageService';
+import { toast } from 'react-hot-toast';
 
-export default function Messages() {
-  const [conversations, setConversations] = useState([])
-  const [allDoctors, setAllDoctors] = useState([])
-  const [selected, setSelected] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [text, setText] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showNewChat, setShowNewChat] = useState(false)
+export default function PatientMessages() {
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [showMobileChat, setShowMobileChat] = useState(false);
+  const messagesEndRef = useRef(null);
 
+  // Load conversations from doctors and students who have access to patient
   useEffect(() => {
-    loadConversations()
-    loadDoctors()
-    const interval = setInterval(loadConversations, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    if (selected?.partner?._id) {
-      loadMessages(selected.partner._id)
-      const interval = setInterval(() => loadMessages(selected.partner._id), 2000)
-      return () => clearInterval(interval)
-    }
-  }, [selected])
+    loadConversations();
+    const interval = setInterval(loadConversations, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const loadConversations = async () => {
     try {
-      const data = await getConversations()
-      setConversations(data)
-      setLoading(false)
-    } catch (err) {
-      console.error('Failed to load conversations', err)
-      setLoading(false)
-    }
-  }
+      setLoading(true);
+      
+      // Fetch patient's doctors (from appointments)
+      let doctors = [];
+      try {
+        const doctorsRes = await getMyDoctors();
+        doctors = (doctorsRes || []).map(doc => ({
+          id: doc._id,
+          name: doc.name || 'Doctor',
+          role: 'doctor',
+          specialization: doc.specialization || 'General',
+          avatar: doc.profilePicture || doc.photoURL || null,
+          lastMessage: 'Start a conversation',
+          time: '',
+          unread: 0,
+          online: false
+        }));
+      } catch (err) {
+        console.error('Failed to load doctors', err);
+      }
 
-  const loadDoctors = async () => {
-    try {
-      const data = await getMyDoctors()
-      setAllDoctors(data)
+      // Fetch conversations (existing chats with doctors/students)
+      let existingChats = [];
+      try {
+        const chatsRes = await getConversations();
+        existingChats = (chatsRes || []).map(conv => ({
+          id: conv._id || conv.partnerId || conv.partner?._id,
+          name: conv.name || conv.partnerName || conv.partner?.name || 'User',
+          role: conv.role || conv.partner?.role || 'doctor',
+          specialization: conv.specialization || conv.partner?.specialization || '',
+          avatar: conv.profilePicture || conv.avatar || conv.partner?.profilePicture || null,
+          lastMessage: conv.lastMessage || 'No messages yet',
+          time: conv.lastMessageTime ? formatTime(conv.lastMessageTime) : '',
+          unread: conv.unreadCount || 0,
+          online: conv.online || false
+        }));
+      } catch (err) {
+        console.error('Failed to load conversations', err);
+      }
+
+      // Merge all conversations, avoiding duplicates
+      const allConversations = [...doctors];
+      
+      // Add existing chats that aren't already in doctors list
+      existingChats.forEach(chat => {
+        const existingIdx = allConversations.findIndex(c => c.id === chat.id);
+        if (existingIdx === -1) {
+          allConversations.push(chat);
+        } else {
+          // Update with latest message info
+          allConversations[existingIdx].lastMessage = chat.lastMessage;
+          allConversations[existingIdx].time = chat.time;
+          allConversations[existingIdx].unread = chat.unread;
+        }
+      });
+
+      setConversations(allConversations);
     } catch (err) {
-      console.error('Failed to load doctors', err)
+      console.error('Failed to load conversations', err);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return date.toLocaleDateString([], { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
+  // Load messages when conversation is selected
+  useEffect(() => {
+    if (selectedConversation) {
+      loadMessages(selectedConversation.id);
+    }
+  }, [selectedConversation]);
 
   const loadMessages = async (partnerId) => {
     try {
-      const data = await getMessages(partnerId)
-      setMessages(data)
+      setMessagesLoading(true);
+      const data = await getMessages(partnerId);
+      const formattedMessages = (data || []).map(msg => ({
+        id: msg._id,
+        senderId: msg.senderId?._id || msg.senderId,
+        text: msg.message,
+        time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: msg.read ? 'read' : 'delivered'
+      }));
+      setMessages(formattedMessages);
     } catch (err) {
-      console.error('Failed to load messages', err)
-    }
-  }
-
-  const handleSend = async (e) => {
-    e.preventDefault()
-    if (!text.trim() || !selected?.partner?._id) return
-    setSending(true)
-    try {
-      const newMessage = await sendMessage(selected.partner._id, text)
-      setMessages([...messages, newMessage])
-      setText('')
-      toast.success('Message sent')
-      loadConversations()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send message')
+      console.error('Failed to load messages', err);
+      setMessages([]);
     } finally {
-      setSending(false)
+      setMessagesLoading(false);
     }
+  };
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    const tempMessage = {
+      id: Date.now().toString(),
+      senderId: user._id,
+      text: newMessage,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sending'
+    };
+
+    setMessages(prev => [...prev, tempMessage]);
+    const messageText = newMessage;
+    setNewMessage('');
+    setSending(true);
+
+    try {
+      await sendMessage(selectedConversation.id, messageText);
+      
+      setMessages(prev => prev.map(m => 
+        m.id === tempMessage.id ? { ...m, status: 'delivered' } : m
+      ));
+
+      // Update conversation last message
+      setConversations(prev => prev.map(c => 
+        c.id === selectedConversation.id 
+          ? { ...c, lastMessage: messageText, time: 'Just now' } 
+          : c
+      ));
+    } catch (error) {
+      toast.error('Failed to send message');
+      setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+      setNewMessage(messageText);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const filteredConversations = conversations.filter(conv => {
+    const matchesSearch = conv.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = activeTab === 'all' || conv.role === activeTab;
+    return matchesSearch && matchesTab;
+  });
+
+  const selectConversation = (conv) => {
+    setSelectedConversation(conv);
+    setShowMobileChat(true);
+    // Mark as read
+    setConversations(prev => prev.map(c => 
+      c.id === conv.id ? { ...c, unread: 0 } : c
+    ));
+  };
+
+  if (loading && conversations.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-emerald-200 dark:border-emerald-800 rounded-full animate-spin border-t-emerald-600" />
+          <MessageSquare className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-emerald-600 animate-pulse" />
+        </div>
+      </div>
+    );
   }
-
-  const startNewChat = (doctor) => {
-    setSelected({
-      partner: {
-        _id: doctor._id,
-        name: doctor.name,
-        email: doctor.email,
-        photoURL: doctor.photoURL,
-        role: doctor.role,
-        specialization: doctor.specialization
-      },
-      lastMessage: '',
-      unreadCount: 0
-    })
-    setMessages([])
-    setShowNewChat(false)
-  }
-
-  const filteredConversations = conversations.filter((conv) =>
-    conv.partner?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.partner?.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const filteredDoctors = allDoctors.filter((doctor) =>
-    doctor.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doctor.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doctor.specialization?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px,1fr] min-h-[calc(100vh-4rem)] text-gray-900 dark:text-gray-100 w-full">
-      {/* Left Panel */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+    <div className="h-[calc(100vh-8rem)] flex rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+      {/* Conversations List */}
+      <div className={`w-full md:w-96 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
+        {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Messages</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h2>
             <button
-              onClick={() => setShowNewChat(!showNewChat)}
-              className={`p-2 rounded-lg transition ${
-                showNewChat 
-                  ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' 
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
-              }`}
-              title="New Chat"
+              onClick={loadConversations}
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
+              title="Refresh"
             >
-              {showNewChat ? <Users className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
+          
+          {/* Search */}
           <div className="relative">
-            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              placeholder={showNewChat ? "Search doctors..." : "Search conversations..."}
+              type="text"
+              placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 transition-all"
             />
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mt-4">
+            {[
+              { id: 'all', label: 'All', icon: MessageSquare },
+              { id: 'doctor', label: 'Doctors', icon: Stethoscope },
+              { id: 'student', label: 'Students', icon: GraduationCap }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium rounded-xl transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Conversations */}
         <div className="flex-1 overflow-y-auto">
-          {showNewChat ? (
-            <>
-              <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900">
-                All Doctors ({filteredDoctors.length})
-              </div>
-              {filteredDoctors.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">No doctors found</div>
-              ) : (
-                filteredDoctors.map((doctor) => (
-                  <button
-                    key={doctor._id}
-                    onClick={() => startNewChat(doctor)}
-                    className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
-                      selected?.partner?._id === doctor._id ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                        {doctor.photoURL ? (
-                          <img src={doctor.photoURL} alt={doctor.name} className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
-                          <span className="text-green-600 dark:text-green-300 font-medium">
-                            {doctor.name?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium">Dr. {doctor.name}</p>
-                        <p className="text-xs text-gray-500">{doctor.specialization || doctor.email}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </>
+          {filteredConversations.length === 0 ? (
+            <div className="p-8 text-center">
+              <MessageSquare className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="text-gray-500 dark:text-gray-400 mb-2">
+                {activeTab === 'doctor' 
+                  ? 'No doctors yet' 
+                  : activeTab === 'student'
+                    ? 'No students yet'
+                    : 'No conversations yet'}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                {activeTab === 'doctor' 
+                  ? 'Book an appointment to connect with doctors' 
+                  : activeTab === 'student'
+                    ? 'Students assigned to your cases will appear here'
+                    : 'Start chatting with your healthcare providers'}
+              </p>
+            </div>
           ) : (
-            <>
-              {loading ? (
-                <div className="p-4 text-center text-gray-500">Loading...</div>
-              ) : filteredConversations.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  <p>No conversations yet</p>
-                  <button
-                    onClick={() => setShowNewChat(true)}
-                    className="mt-2 text-indigo-600 dark:text-indigo-400 text-sm hover:underline"
-                  >
-                    Message a doctor
-                  </button>
+            filteredConversations.map((conv) => (
+              <div
+                key={conv.id}
+                onClick={() => selectConversation(conv)}
+                className={`p-4 flex items-center gap-3 cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                  selectedConversation?.id === conv.id ? 'bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500' : ''
+                }`}
+              >
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold overflow-hidden ${
+                    conv.role === 'doctor' 
+                      ? 'bg-gradient-to-br from-violet-400 to-purple-500' 
+                      : 'bg-gradient-to-br from-teal-400 to-cyan-500'
+                  }`}>
+                    {conv.avatar ? (
+                      <img src={conv.avatar} alt={conv.name} className="w-full h-full object-cover" />
+                    ) : (
+                      conv.name?.[0] || '?'
+                    )}
+                  </div>
+                  {conv.online && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
+                  )}
                 </div>
-              ) : (
-                filteredConversations.map((conv) => (
-                  <button
-                    key={conv.partner._id}
-                    onClick={() => setSelected(conv)}
-                    className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
-                      selected?.partner?._id === conv.partner._id ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          {conv.partner.photoURL ? (
-                            <img src={conv.partner.photoURL} alt={conv.partner.name} className="w-10 h-10 rounded-full object-cover" />
-                          ) : (
-                            <span className="text-green-600 dark:text-green-300 font-medium">
-                              {conv.partner.name?.charAt(0)?.toUpperCase() || '?'}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{conv.partner.role === 'doctor' ? 'Dr. ' : ''}{conv.partner.name}</p>
-                          <p className="text-xs text-gray-500">{conv.partner.email}</p>
-                        </div>
-                      </div>
-                      {conv.unreadCount > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {conv.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-1 mt-1 ml-13">
-                      {conv.lastMessage}
-                    </p>
-                  </button>
-                ))
-              )}
-            </>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                      {conv.role === 'doctor' ? `Dr. ${conv.name}` : conv.name}
+                    </h3>
+                    {conv.time && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                        {conv.time}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-0.5">
+                    {conv.role === 'doctor' ? (conv.specialization || 'Doctor') : 'Medical Student'}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                    {conv.lastMessage}
+                  </p>
+                </div>
+
+                {/* Unread Badge */}
+                {conv.unread > 0 && (
+                  <div className="flex-shrink-0 w-5 h-5 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">{conv.unread}</span>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
 
-      {/* Right Panel - Chat */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col min-h-[420px]">
-        {selected ? (
+      {/* Chat Area */}
+      <div className={`flex-1 flex flex-col ${!showMobileChat ? 'hidden md:flex' : 'flex'}`}>
+        {selectedConversation ? (
           <>
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                {selected.partner.photoURL ? (
-                  <img src={selected.partner.photoURL} alt={selected.partner.name} className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <span className="text-green-600 dark:text-green-300 font-medium">
-                    {selected.partner.name?.charAt(0)?.toUpperCase() || '?'}
-                  </span>
-                )}
-              </div>
-              <div>
-                <p className="font-semibold">{selected.partner.role === 'doctor' ? 'Dr. ' : ''}{selected.partner.name}</p>
-                <p className="text-sm text-gray-500">{selected.partner.specialization || selected.partner.email}</p>
+            {/* Chat Header */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowMobileChat(false)}
+                  className="md:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                </button>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden ${
+                  selectedConversation.role === 'doctor' 
+                    ? 'bg-gradient-to-br from-violet-400 to-purple-500' 
+                    : 'bg-gradient-to-br from-teal-400 to-cyan-500'
+                }`}>
+                  {selectedConversation.avatar ? (
+                    <img src={selectedConversation.avatar} alt={selectedConversation.name} className="w-full h-full object-cover" />
+                  ) : (
+                    selectedConversation.name?.[0] || '?'
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {selectedConversation.role === 'doctor' ? `Dr. ${selectedConversation.name}` : selectedConversation.name}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    {selectedConversation.online && (
+                      <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    )}
+                    {selectedConversation.role === 'doctor' 
+                      ? (selectedConversation.specialization || 'Doctor') 
+                      : 'Medical Student'}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex-1 p-4 space-y-3 overflow-y-auto bg-gray-50 dark:bg-gray-900">
-              {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  No messages yet. Start the conversation!
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
+              {messagesLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-8 h-8 border-2 border-emerald-200 dark:border-emerald-800 rounded-full animate-spin border-t-emerald-600" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <MessageSquare className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Send a message to start the conversation</p>
+                  </div>
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const isOwn = msg.senderId._id === JSON.parse(localStorage.getItem('user') || '{}')._id
+                  const senderId = msg.senderId;
+                  const isMe = senderId === user._id;
                   return (
                     <div
-                      key={msg._id}
-                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                      key={msg.id}
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div
-                        className={`max-w-[80%] rounded-lg p-3 shadow-sm ${
-                          isOwn
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100'
-                        }`}
-                      >
-                        <p className="text-sm">{msg.message}</p>
-                        <span className={`text-[11px] mt-1 block ${
-                          isOwn ? 'text-indigo-100' : 'text-gray-500'
+                      <div className={`max-w-[75%] ${isMe ? 'order-2' : 'order-1'}`}>
+                        <div className={`px-4 py-2.5 rounded-2xl ${
+                          isMe 
+                            ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-br-md' 
+                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md shadow-sm'
                         }`}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                          <p className="text-sm">{msg.text}</p>
+                        </div>
+                        <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <span className="text-xs text-gray-400">{msg.time}</span>
+                          {isMe && (
+                            <span className="text-xs text-gray-400">
+                              {msg.status === 'sending' && <Clock className="w-3 h-3" />}
+                              {msg.status === 'delivered' && <Check className="w-3 h-3" />}
+                              {msg.status === 'read' && <CheckCheck className="w-3 h-3 text-emerald-500" />}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )
+                  );
                 })
               )}
+              <div ref={messagesEndRef} />
             </div>
-            <form
-              className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3"
-              onSubmit={handleSend}
-            >
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500"
-              />
-              <button
-                type="submit"
-                disabled={sending || !text.trim()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Send className="h-4 w-4" />
-                Send
-              </button>
+
+            {/* Message Input */}
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim() || sending}
+                  className="p-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
             </form>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <MessageSquare className="h-12 w-12 mb-3 text-gray-300 dark:text-gray-600" />
-            <p className="text-lg font-medium">Select a conversation</p>
-            <p className="text-sm">or message a doctor</p>
-            <button
-              onClick={() => setShowNewChat(true)}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
-            >
-              <Plus className="h-4 w-4 inline mr-2" />
-              Message Doctor
-            </button>
+          /* Empty State */
+          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900/50">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 flex items-center justify-center">
+                <MessageSquare className="w-10 h-10 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Your Messages
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 max-w-sm">
+                Chat with your doctors and medical students assigned to your case.
+              </p>
+            </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

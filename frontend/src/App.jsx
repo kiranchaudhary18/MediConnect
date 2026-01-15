@@ -38,6 +38,7 @@ import PatientRecords from './pages/student/PatientRecords';
 import StudentAssignments from './pages/student/Assignments';
 import AILearning from './pages/student/AILearning';
 import StudentMessages from './pages/student/Messages';
+import StudentNotifications from './pages/student/Notifications';
 
 // Public route wrapper that redirects to dashboard if user is logged in
 const PublicRoute = () => {
@@ -103,7 +104,7 @@ function App() {
                 <Route path="appointments" element={<PatientAppointments />} />
                 <Route path="medical-history" element={<MedicalHistory />} />
                 <Route path="notifications" element={<Notifications />} />
-                <Route path="chat" element={<PatientMessages />} />
+                <Route path="messages" element={<PatientMessages />} />
 
                 <Route path="feedback" element={<div className="p-6">Feedback (Coming Soon)</div>} />
               </Route>
@@ -139,6 +140,7 @@ function App() {
                 <Route path="assignments" element={<StudentAssignments />} />
                 <Route path="ai-learning" element={<AILearning />} />
                 <Route path="messages" element={<StudentMessages />} />
+                <Route path="notifications" element={<StudentNotifications />} />
               </Route>
               
               <Route path="*" element={<Navigate to="/" />} />

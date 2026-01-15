@@ -66,7 +66,7 @@ export default function Notifications() {
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/patient/dashboard')}
+            onClick={() => navigate('/student/dashboard')}
             className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -81,7 +81,7 @@ export default function Notifications() {
         {unreadCount > 0 && (
           <button
             onClick={markAllAsRead}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
           >
             <Check className="w-4 h-4" />
             Mark all read
@@ -92,7 +92,7 @@ export default function Notifications() {
       {/* Notifications List */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-12 h-12 border-4 border-emerald-200 dark:border-emerald-800 rounded-full animate-spin border-t-emerald-600" />
+          <div className="w-12 h-12 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-spin border-t-blue-600" />
         </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
@@ -107,10 +107,10 @@ export default function Notifications() {
               key={n._id || n.id}
               className={`p-4 flex items-start gap-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
                 idx !== notifications.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
-              } ${!n.read ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}
+              } ${!n.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
             >
               {/* Indicator */}
-              <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!n.read ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+              <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!n.read ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
               
               {/* Content */}
               <div className="flex-1 min-w-0" onClick={() => openNotification(n)}>
@@ -162,7 +162,7 @@ export default function Notifications() {
             <div className="px-4 pb-4 flex justify-end">
               <button
                 onClick={() => setSelected(null)}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all"
               >
                 Close
               </button>

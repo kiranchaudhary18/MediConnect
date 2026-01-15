@@ -109,7 +109,7 @@ export default function PatientLayout() {
     { name: 'Book Appointment', icon: Calendar, path: '/patient/book-appointment' },
     { name: 'My Appointments', icon: Stethoscope, path: '/patient/appointments' },
     { name: 'Medical History', icon: FileText, path: '/patient/medical-history' },
-    { name: 'Chat with Doctor', icon: MessageSquare, path: '/patient/chat' },
+    { name: 'Messages', icon: MessageSquare, path: '/patient/messages' },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -313,6 +313,15 @@ export default function PatientLayout() {
                       </div>
                     )}
                   </div>
+                  <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+                    <Link
+                      to="/patient/notifications"
+                      onClick={() => setNotificationOpen(false)}
+                      className="block w-full text-center py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      View all notifications
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -330,6 +339,7 @@ export default function PatientLayout() {
                     <User className="w-4 h-4 text-white" />
                   )}
                 </div>
+                <span className="text-sm font-medium text-gray-900 dark:text-white max-w-[120px] truncate hidden sm:block">{user?.name || 'Patient'}</span>
                 <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
               </button>
 

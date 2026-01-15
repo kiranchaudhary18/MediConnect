@@ -311,6 +311,15 @@ export default function StudentLayout() {
                       </div>
                     )}
                   </div>
+                  <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+                    <Link
+                      to="/student/notifications"
+                      onClick={() => setNotificationOpen(false)}
+                      className="block w-full text-center py-2 text-sm font-medium text-teal-600 dark:text-teal-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      View all notifications
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>

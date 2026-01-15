@@ -177,7 +177,7 @@ export default function StudentMessages() {
       const data = await getMessages(partnerId);
       const formattedMessages = (data || []).map(msg => ({
         id: msg._id,
-        senderId: msg.senderId === user._id ? 'me' : msg.senderId,
+        senderId: msg.senderId?._id || msg.senderId,
         text: msg.message,
         time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: msg.read ? 'read' : 'delivered'
@@ -202,7 +202,7 @@ export default function StudentMessages() {
 
     const tempMessage = {
       id: Date.now().toString(),
-      senderId: 'me',
+      senderId: user._id,
       text: newMessage,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'sending'
@@ -450,7 +450,8 @@ export default function StudentMessages() {
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const isMe = msg.senderId === 'me';
+                  const senderId = msg.senderId;
+                  const isMe = senderId === user._id;
                   return (
                     <div
                       key={msg.id}

@@ -2,10 +2,12 @@ import { MessageSquare, Search, Send, Plus, Users, PanelLeftClose, PanelLeft, Gr
 import { useState, useEffect, useRef } from 'react'
 import { getConversations, getMessages, sendMessage } from '../../services/messageService'
 import { getDoctorPatients } from '../../services/patientService'
+import { useAuth } from '../../context/AuthContext'
 import axios from '../../utils/axios'
 import toast from 'react-hot-toast'
 
 export default function Messages() {
+  const { user } = useAuth()
   const [conversations, setConversations] = useState([])
   const [allPatients, setAllPatients] = useState([])
   const [allStudents, setAllStudents] = useState([])
@@ -371,9 +373,8 @@ export default function Messages() {
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
                   const senderId = msg.senderId?._id || msg.senderId
-                  const isOwn = senderId === currentUser._id || senderId === currentUser.id
+                  const isOwn = senderId === user._id
                   return (
                     <div
                       key={msg._id}
