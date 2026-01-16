@@ -7,6 +7,7 @@ import {
   markAsRead,
   getMyPatients,
   getMyDoctors,
+  deleteMessage,
 } from '../controllers/messageController.js';
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.get('/my-doctors', getMyDoctors);
 router.get('/:partnerId', getMessages);
 router.post('/send', sendMessage);
 router.patch('/:messageId/read', markAsRead);
+router.delete('/:messageId', deleteMessage);
 
 export default router;

@@ -351,6 +351,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patient', patientRoutes);
 app.use('/api/messages', messagesRoutes);
 
+/* -------------------- Root Health Check -------------------- */
+app.get("/", (req, res) => {
+  res.send("API Working ✅");
+});
+
 /* -------------------- Health Check -------------------- */
 app.get('/health', (req, res) => {
   res.json({

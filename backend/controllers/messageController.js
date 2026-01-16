@@ -131,3 +131,28 @@ export const markAsRead = async (req, res) => {
     res.status(500).json({ message: 'Failed to mark message as read' });
   }
 };
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id;
+
+    // Find the message and check if the user is the sender
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'You can only delete your own messages' });
+    }
+
+    // Delete the message
+    await Message.findByIdAndDelete(messageId);
+
+    res.json({ message: 'Message deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete message' });
+  }
+};
