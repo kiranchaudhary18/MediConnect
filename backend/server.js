@@ -310,7 +310,8 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5173',
   'http://127.0.0.1:3000',
   'https://mediconnect-in.onrender.com',
-  'https://mediconnect-frontend.onrender.com'
+  'https://mediconnect-frontend.onrender.com',
+  'https://www.mediconnecthub.in/'
 ]);
 
 app.use((req, res, next) => {
